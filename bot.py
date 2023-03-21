@@ -3,9 +3,8 @@ import discord
 queues = {}
 embeds = {}
 people = 3
-msg_id = 0
 
-embed = discord.Embed()
+embed = discord.Embed() 
 
 class JoinButton(discord.ui.View):
      def __init__(self, id):
@@ -14,13 +13,13 @@ class JoinButton(discord.ui.View):
          self.timeout=None
      @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
      async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
-         if interaction.user in queues[self.id]:
+         if interaction.user in queues[self.id][1]:
              await interaction.response.edit_message(embed=embeds[self.id])
              return
          print("join button")
          s = ""
-         queues[self.id].append(interaction.user)
-         for dude in queues[self.id]:
+         queues[self.id][1].append(interaction.user)
+         for dude in queues[self.id][1]:
             s += f"<@{dude.id}>" + "\n"
          embeds[self.id].remove_field(index=0)
          embeds[self.id].add_field(name="Users in Queue", value=s)
@@ -28,13 +27,13 @@ class JoinButton(discord.ui.View):
          await interaction.response.edit_message(embed=embeds[self.id])
      @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
      async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
-         if interaction.user not in queues[self.id]:
+         if interaction.user not in queues[self.id][1]:
             await interaction.response.edit_message(embed=embeds[self.id])
             return
          print("leave button")
          s = ""
-         queues[self.id].remove(interaction.user)
-         for dude in queues[self.id]:
+         queues[self.id][1].remove(interaction.user)
+         for dude in queues[self.id][1]:
             s += f"<@{dude.id}>" + "\n"
          embeds[self.id].remove_field(index=0)
          embeds[self.id].add_field(name="Users in Queue", value=s)
@@ -44,20 +43,21 @@ class JoinButton(discord.ui.View):
 async def on_raid(message, queueID, channel):
     print(message.content)
     for i in range(0, people):
-        if len(queues[queueID]) > 0:
-            guy = queues[queueID].pop(0)
+        if len(queues[queueID][1]) > 0:
+            guy = queues[queueID][1].pop(0)
             await guy.send(message.content)
     s = ""
-    for dude in queues[queueID]:
+    for dude in queues[queueID][1]:
+        print(f"<@{dude.id}>")
         s += f"<@{dude.id}>" + "\n"
     embeds[queueID].remove_field(index=0)
     embeds[queueID].add_field(name="Users in Queue", value=s)
             
-    msg = await channel.fetch_message(msg_id)
+    msg = await channel.fetch_message(queues[queueID][0])
     await msg.edit(embed=embeds[queueID])
 
 def run_bot():
-    TOKEN = "MTA1NjEwNzM2MDg2NDcwMjUxNA.GTAB0M.vcw1LzXkT7K3dqrP68Ve7C8cgwIQ0g8bdi70F0"
+    TOKEN = "MTA1NjEwNzM2MDg2NDcwMjUxNA.GbmjDP.a76VeM41FOOldXu0G6WAT6aTbxNjX-yE9LVCeI"
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
@@ -72,7 +72,7 @@ def run_bot():
     #create new queue
         #1084204436466962472
         #974890751920074772
-        channel = client.get_channel(1084204436466962472)
+        channel = client.get_channel(1052459635006787635)
         
         global msg_id
         global embed
@@ -81,6 +81,7 @@ def run_bot():
             content = message.content.split()
             if len(content) <= 0:
                 return
+            #adds new queue
             if content[0] == "add":
                 try:
                     queue_ID = int(content[1])
@@ -94,18 +95,20 @@ def run_bot():
                     print("not a valid integer ID")
                 if queue_ID not in queues and queue_ID != 0:
                     queues[queue_ID] = []
+                    queues[queue_ID].append(msg.id)
+                    queues[queue_ID].append([])
                 return
             elif content[0] == "join":
                 if int(content[1]) in queues and message.author not in queues[int(content[1])]:
-                    queues[int(content[1])].append(message.author)
+                    queues[int(content[1])][1].append(message.author)
                     
             elif content[0] == "leave":
                 if int(content[1]) in queues and message.author in queues[int(content[1])]:
-                    queues[int(content[1])].remove(message.author)
+                    queues[int(content[1])][1].remove(message.author)
             else:
                 return
             s = ""
-            for dude in queues[int(content[1])]:
+            for dude in queues[int(content[1])][1]:
                 s += f"<@{dude.id}>" + "\n"
             embeds[int(content[1])].remove_field(index=0)
             embeds[int(content[1])].add_field(name="Users in Queue", value=s)
@@ -117,6 +120,7 @@ def run_bot():
         for queueID in queues:
             if client.get_channel(queueID) == message.channel:
                 if "Raid Code" in message.content:
+                    
                     await on_raid(message, queueID, channel)
                     
                 return
