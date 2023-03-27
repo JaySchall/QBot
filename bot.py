@@ -1,5 +1,8 @@
 import discord
+import sqlite3
 
+con = sqlite3.connect("Queue.sqlite3")
+cur = con.cursor()
 queues = {}
 embeds = {}
 people = 3
@@ -57,7 +60,7 @@ async def on_raid(message, queueID, channel):
     await msg.edit(embed=embeds[queueID])
 
 def run_bot():
-    TOKEN = "MTA1NjEwNzM2MDg2NDcwMjUxNA.GbmjDP.a76VeM41FOOldXu0G6WAT6aTbxNjX-yE9LVCeI"
+    TOKEN = ""
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
@@ -65,14 +68,24 @@ def run_bot():
     
     @client.event
     async def on_ready():
+        channel = client.get_channel(1084204436466962472)
         print("up and running!")
+        for entry in cur.execute("SELECT QID, MID FROM Queues"):
+            queues[entry[0]] = []
+            embeds[entry[0]] = discord.Embed(title="Queue " + str(entry[0]))
+            embeds[entry[0]].add_field(name="Users in Queue", value="1.")
+            queues[entry[0]].append(entry[1])
+            queues[entry[0]].append([])
+            msg = await channel.fetch_message(entry[1])
+            await msg.edit(embed=embeds[entry[0]], view=JoinButton(entry[0]))
+            print(entry[0])
 
     @client.event
     async def on_message(message):
     #create new queue
         #1084204436466962472
         #974890751920074772
-        channel = client.get_channel(1052459635006787635)
+        channel = client.get_channel(1084204436466962472)
         
         global msg_id
         global embed
@@ -97,6 +110,9 @@ def run_bot():
                     queues[queue_ID] = []
                     queues[queue_ID].append(msg.id)
                     queues[queue_ID].append([])
+                    cur.execute("INSERT INTO Queues(QID,MID) VALUES("+str(queue_ID) + ","+ str(msg_id) + ")")
+                    con.commit()
+
                 return
             elif content[0] == "join":
                 if int(content[1]) in queues and message.author not in queues[int(content[1])]:
