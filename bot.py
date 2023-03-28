@@ -9,46 +9,7 @@ people = 3
 
 embed = discord.Embed() 
 
-class JoinButton(discord.ui.View):
-     def __init__(self, id):
-         super().__init__()
-         self.id = id
-         self.timeout=None
-     @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
-     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
-         if interaction.user in queues[self.id][1]:
-             await interaction.response.edit_message(embed=embeds[self.id])
-             return
-         print("join button")
-         s = ""
-         queues[self.id][1].append(interaction.user)
-         for dude in queues[self.id][1]:
-            s += f"<@{dude.id}>" + "\n"
-         embeds[self.id].remove_field(index=0)
-         embeds[self.id].add_field(name="Users in Queue", value=s)
-
-         await interaction.response.edit_message(embed=embeds[self.id])
-     @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
-     async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
-         if interaction.user not in queues[self.id][1]:
-            await interaction.response.edit_message(embed=embeds[self.id])
-            return
-         print("leave button")
-         s = ""
-         queues[self.id][1].remove(interaction.user)
-         for dude in queues[self.id][1]:
-            s += f"<@{dude.id}>" + "\n"
-         embeds[self.id].remove_field(index=0)
-         embeds[self.id].add_field(name="Users in Queue", value=s)
-
-         await interaction.response.edit_message(embed=embeds[self.id])
-
-async def on_raid(message, queueID, channel):
-    print(message.content)
-    for i in range(0, people):
-        if len(queues[queueID][1]) > 0:
-            guy = queues[queueID][1].pop(0)
-            await guy.send(message.content)
+async def updateEmbed(queueID, channel):
     s = ""
     for dude in queues[queueID][1]:
         print(f"<@{dude.id}>")
@@ -58,6 +19,42 @@ async def on_raid(message, queueID, channel):
             
     msg = await channel.fetch_message(queues[queueID][0])
     await msg.edit(embed=embeds[queueID])
+    
+
+
+
+class JoinButton(discord.ui.View):
+     def __init__(self, id):
+         super().__init__()
+         self.id = id
+         self.timeout=None
+     @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
+     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
+         await interaction.response.edit_message(embed=embeds[self.id])
+         if interaction.user in queues[self.id][1]:
+             
+             return
+         print("join button")
+         queues[self.id][1].append(interaction.user)
+         await updateEmbed(self.id, interaction.channel)
+
+     @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
+     async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
+         await interaction.response.edit_message(embed=embeds[self.id])
+         if interaction.user not in queues[self.id][1]:
+            
+            return
+         print("leave button")
+         queues[self.id][1].remove(interaction.user)
+         await updateEmbed(self.id, interaction.channel)
+
+async def on_raid(message, queueID, channel):
+    print(message.content)
+    for i in range(0, people):
+        if len(queues[queueID][1]) > 0:
+            guy = queues[queueID][1].pop(0)
+            await guy.send(message.content)
+    await updateEmbed(queueID, channel)
 
 def run_bot():
     TOKEN = ""
