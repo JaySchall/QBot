@@ -31,9 +31,9 @@ class JoinButton(discord.ui.View):
      @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
      async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
          await interaction.response.edit_message(embed=embeds[self.id])
-         if interaction.user in queues[self.id][1]:
-             
-             return
+         for queueID in queues:
+            if interaction.user in queues[queueID][1]:
+                return
          print("join button")
          queues[self.id][1].append(interaction.user)
          await updateEmbed(self.id, interaction.channel)
@@ -42,7 +42,6 @@ class JoinButton(discord.ui.View):
      async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
          await interaction.response.edit_message(embed=embeds[self.id])
          if interaction.user not in queues[self.id][1]:
-            
             return
          print("leave button")
          queues[self.id][1].remove(interaction.user)
@@ -65,7 +64,7 @@ def run_bot():
     
     @client.event
     async def on_ready():
-        channel = client.get_channel(1084204436466962472)
+        channel = client.get_channel(1090735300298424410)
         print("up and running!")
         for entry in cur.execute("SELECT QID, MID FROM Queues"):
             queues[entry[0]] = []
@@ -82,7 +81,7 @@ def run_bot():
     #create new queue
         #1084204436466962472
         #974890751920074772
-        channel = client.get_channel(1084204436466962472)
+        channel = client.get_channel(1090735300298424410)
         
         global msg_id
         global embed
