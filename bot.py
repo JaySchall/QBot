@@ -1,5 +1,6 @@
 import discord
 import sqlite3
+
 from discord.ext import commands
 
 con = sqlite3.connect("Queue.sqlite3")
@@ -11,7 +12,8 @@ people = 3
 
 embed = discord.Embed() 
 
-async def updateEmbed(queueID, channel):
+async def updateEmbed(queueID, channel): 
+
     embeds[queueID].remove_field(index=0)
     embeds[queueID].remove_field(index=0)
     s = ""
@@ -46,34 +48,43 @@ class JoinButton(discord.ui.View):
          user = interaction.user
          for queueID in queues:
             if user in queues[queueID][1] or user in queues[queueID][2]:
+                #await interaction.response.defer()
                 return
+            
+         raidchannel = self.guild.get_channel(self.id)
          for roleID in priority:
             if discord.utils.get(self.guild.roles, id=roleID) in user.roles:
-                queues[self.id][1].append(user)
-                print(f"{user.mention} joined priority queue")
+                queues[self.id][1].append(user) 
+                print(f"{user.mention} joined priority queue for " + raidchannel.name)
                 await updateEmbed(self.id, interaction.channel)
+                #await interaction.response.defer()
                 return
          #await interaction.response.send_message(f"{user.mention} joined queue", allowed_mentions=False)
          queues[self.id][2].append(user)
-         print(f"{user.mention} joined normal queue")
+         print(f"{user.mention} joined normal queue for " + raidchannel.name)
          await updateEmbed(self.id, interaction.channel)
+         #await interaction.response.defer()
 
      @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
      async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
          await interaction.response.edit_message(embed=embeds[self.id])
          user = interaction.user
          if user not in queues[self.id][1] and user not in queues[self.id][2]:
+            #await interaction.response.defer()
             return
+         raidchannel = self.guild.get_channel(self.id)
          for roleID in priority:
             if discord.utils.get(self.guild.roles, id=roleID) in user.roles:
                 queues[self.id][1].remove(user)
-                print(f"{user.mention} left priority queue")
+                print(f"{user.mention} left priority queue for " + raidchannel.name)
                 await updateEmbed(self.id, interaction.channel)
+                #await interaction.response.defer()
                 return
          #await interaction.response.send_message(f"{user.mention} left queue" , allowed_mentions=discord.AllowedMentions.all)
          queues[self.id][2].remove(user)
-         print(f"{user.mention} left normal queue")
+         print(f"{user.mention} left normal queue for " + raidchannel.name)
          await updateEmbed(self.id, interaction.channel)
+        # await interaction.response.defer()
 
 async def on_raid(message, queueID, channel):
     print(message.content)
@@ -97,13 +108,16 @@ def run_bot():
     async def on_ready():
         channel = client.get_channel(1090735300298424410)
         guild = client.get_guild(1047657265517314108)
+        
         print("up and running!")
         for entry in cur.execute("SELECT PrioID FROM Priority"):
             priority.append(entry[0])
-            print(entry[0])
+            role = discord.utils.get(channel.guild.roles, id=entry[0])
+            print("Initiated role " + role.name + " with ID: " +  str(entry[0]) + " in priority queue")
         for entry in cur.execute("SELECT QID, MID FROM Queues"):
             queues[entry[0]] = []
-            embeds[entry[0]] = discord.Embed(title="Queue " + str(entry[0]))
+            raidchannel = client.get_channel(entry[0])
+            embeds[entry[0]] = discord.Embed(title="Queue " + raidchannel.name)
             embeds[entry[0]].add_field(name="Priority Users in Queue", value="1.")
             embeds[entry[0]].add_field(name="Normal Users in Queue", value="1.")
             queues[entry[0]].append(entry[1])
@@ -111,7 +125,7 @@ def run_bot():
             queues[entry[0]].append([])
             msg = await channel.fetch_message(entry[1])
             await msg.edit(embed=embeds[entry[0]], view=JoinButton(entry[0], guild))
-            print(entry[0])
+            print("Initiated Queue " + raidchannel.name + " with ID: " + str(entry[0]))
 
     @client.event
     async def on_message(message):
@@ -132,7 +146,8 @@ def run_bot():
                 try:
                     queue_ID = int(content[1])
                     guild = client.get_guild(1047657265517314108)
-                    embeds[queue_ID] = discord.Embed(title="Queue " + str(queue_ID))
+                    raidchannel = client.get_channel(queue_ID)
+                    embeds[queue_ID] = discord.Embed(title="Queue " + raidchannel.name)
                     embeds[queue_ID].add_field(name="Priority Users in Queue", value="1.")
                     embeds[queue_ID].add_field(name="Normal Users in Queue", value="1.")
                     msg = await channel.send(embed=embeds[queue_ID], view=JoinButton(queue_ID, guild))
@@ -140,6 +155,7 @@ def run_bot():
                     print(msg_id)
                 except:
                     print("not a valid integer ID")
+                    return
                 if queue_ID not in queues and queue_ID != 0:
                     queues[queue_ID] = []
                     queues[queue_ID].append(msg.id)
@@ -165,14 +181,6 @@ def run_bot():
                     queues[int(content[1])][1].remove(message.author)
             else:
                 return
-            s = ""
-            for dude in queues[int(content[1])][1]:
-                s += f"<@{dude.id}>" + "\n"
-            embeds[int(content[1])].remove_field(index=0)
-            embeds[int(content[1])].add_field(name="Users in Queue", value=s)
-            
-            msg = await channel.fetch_message(msg_id)
-            await msg.edit(embed=embeds[int(content[1])])
 
 
         for queueID in queues:
