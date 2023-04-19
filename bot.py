@@ -1,8 +1,8 @@
 import discord
 import sqlite3
-
+import os
 from discord.ext import commands
-
+from dotenv import load_dotenv
 con = sqlite3.connect("Queue.sqlite3")
 cur = con.cursor()
 queues = {}
@@ -10,6 +10,7 @@ embeds = {}
 priority = []
 people = 3
 
+load_dotenv()
 embed = discord.Embed() 
 
 async def updateEmbed(queueID, channel): 
@@ -98,7 +99,7 @@ async def on_raid(message, queueID, channel):
     await updateEmbed(queueID, channel)
 
 def run_bot():
-    TOKEN = ""
+    TOKEN = os.getenv('TOKEN')
     intents = discord.Intents.default()
     intents.message_content = True
     intents.members = True
