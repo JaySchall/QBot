@@ -100,6 +100,7 @@ async def on_raid(message, queueID, channel):
 
 def run_bot():
     TOKEN = os.getenv('TOKEN')
+
     intents = discord.Intents.default()
     intents.message_content = True
     intents.members = True
@@ -107,8 +108,8 @@ def run_bot():
     
     @client.event
     async def on_ready():
-        channel = client.get_channel(1090735300298424410)
-        guild = client.get_guild(1047657265517314108)
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        guild = client.get_guild(int(os.getenv('GUILD')))
         
         print("up and running!")
         for entry in cur.execute("SELECT PrioID FROM Priority"):
@@ -133,7 +134,7 @@ def run_bot():
     #create new queue
         #1084204436466962472
         #974890751920074772
-        channel = client.get_channel(1090735300298424410)
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
         
         global msg_id
         global embed
@@ -146,7 +147,7 @@ def run_bot():
             if content[0] == "add":
                 try:
                     queue_ID = int(content[1])
-                    guild = client.get_guild(1047657265517314108)
+                    guild = client.get_guild(int(os.getenv('GUILD')))
                     raidchannel = client.get_channel(queue_ID)
                     embeds[queue_ID] = discord.Embed(title="Queue " + raidchannel.name)
                     embeds[queue_ID].add_field(name="Priority Users in Queue", value="1.")
