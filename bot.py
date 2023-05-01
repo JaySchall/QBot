@@ -1,7 +1,7 @@
 import discord
 import sqlite3
 import os
-from discord.ext import commands
+from discord import app_commands
 from dotenv import load_dotenv
 con = sqlite3.connect("Queue.sqlite3")
 cur = con.cursor()
@@ -9,6 +9,11 @@ queues = {}
 embeds = {}
 priority = []
 people = 3
+
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+
 
 load_dotenv()
 embed = discord.Embed() 
@@ -98,19 +103,123 @@ async def on_raid(message, queueID, channel):
             await guy.send(message.content)
     await updateEmbed(queueID, channel)
 
+
 def run_bot():
     TOKEN = os.getenv('TOKEN')
 
-    intents = discord.Intents.default()
-    intents.message_content = True
-    intents.members = True
-    client = discord.Client(intents=intents)
     
-    @client.event
-    async def on_ready():
+    client = discord.Client(intents=intents)
+    tree = app_commands.CommandTree(client)
+    guild = client.get_guild(int(os.getenv('GUILD')))
+    channel = client.get_channel(int(os.getenv('CHANNEL')))
+    @tree.command(name="ping", description="testing")
+    async def test(interaction: discord.Interaction):
+        await interaction.response.send_message("pong")
+
+    @tree.command(name="addpriority", description="adds a new priority role")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def prioadd(interaction: discord.Interaction, number: str):
+        guild = client.get_guild(int(os.getenv('GUILD')))
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        try:
+            number = int(number)
+            role = discord.utils.get(channel.guild.roles, id=number)
+            print(role.name)
+        except:
+            await interaction.response.send_message("invalid role id")
+            return
+        if number in priority:
+            await interaction.response.send_message("role is already a priority role")
+            return
+        priority.append(number)
+        cur.execute("INSERT INTO Priority(PrioID) VALUES("+str(number)+ ")")
+        con.commit()
+        await interaction.response.send_message(role.name + " added to priority roles")
+
+    @tree.command(name="removepriority", description="removes a priority role")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def prioremove(interaction: discord.Interaction, number: str):
+        guild = client.get_guild(int(os.getenv('GUILD')))
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        try:
+            number = int(number)
+            role = discord.utils.get(channel.guild.roles, id=number)
+            print(role.name)
+        except:
+            await interaction.response.send_message("invalid role id")
+            return
+        if number not in priority:
+            await interaction.response.send_message("role is not a priority role")
+            return
+        priority.remove(number)
+        cur.execute("DELETE FROM Priority WHERE PrioID = "+str(number))
+        con.commit()
+        await interaction.response.send_message(role.name + " removed from priority roles")
+
+    @tree.command(name="addqueue", description="adds a queue")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def queueadd(interaction: discord.Interaction, number: str):
         channel = client.get_channel(int(os.getenv('CHANNEL')))
         guild = client.get_guild(int(os.getenv('GUILD')))
-        
+        try:
+            queue_ID = int(number)
+            
+            raidchannel = client.get_channel(queue_ID)
+            print(raidchannel.name)
+        except:
+            await interaction.response.send_message("invalid raid channel id")
+            return
+        if queue_ID in queues:
+            await interaction.response.send_message("raid channel already has a queue")
+            return
+        embeds[queue_ID] = discord.Embed(title="Queue " + raidchannel.name)
+        embeds[queue_ID].add_field(name="Priority Users in Queue", value="1.")
+        embeds[queue_ID].add_field(name="Normal Users in Queue", value="1.")
+        msg = await channel.send(embed=embeds[queue_ID], view=JoinButton(queue_ID, guild))
+        msg_id = msg.id
+        print(msg_id)    
+        queues[queue_ID] = []
+        queues[queue_ID].append(msg.id)
+        queues[queue_ID].append([])
+        queues[queue_ID].append([])
+        cur.execute("INSERT INTO Queues(QID,MID) VALUES("+str(queue_ID) + ","+ str(msg_id) + ")")
+        con.commit()
+        await interaction.response.send_message(raidchannel.name + " queue has been created")
+
+    @tree.command(name="removequeue", description="removes a queue")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def queueremove(interaction: discord.Interaction, number: str):
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        guild = client.get_guild(int(os.getenv('GUILD')))
+        try:
+            queue_ID = int(number)
+            raidchannel = client.get_channel(queue_ID)
+            print(raidchannel.name)
+        except:
+            await interaction.response.send_message("invalid raid channel id")
+            return
+        if queue_ID not in queues:
+            await interaction.response.send_message("raid channel doesn't have a queue")
+            return
+        embeds.pop(queue_ID)
+        msg = await channel.fetch_message(queues[queue_ID][0])
+        await msg.delete()
+        queues.pop(queue_ID)
+        cur.execute("DELETE FROM Queues WHERE QID = "+str(queue_ID))
+        con.commit()
+        await interaction.response.send_message(raidchannel.name + " queue has been removed")
+
+    @tree.error
+    async def on_app_command_error(interaction, error):
+        if isinstance(error, app_commands.MissingPermissions):
+            await interaction.response.send_message(error)
+
+
+    @client.event
+    async def on_ready():
+        guild = client.get_guild(int(os.getenv('GUILD')))
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        await tree.sync(guild=guild)
         print("up and running!")
         for entry in cur.execute("SELECT PrioID FROM Priority"):
             priority.append(entry[0])
@@ -131,59 +240,7 @@ def run_bot():
 
     @client.event
     async def on_message(message):
-    #create new queue
-        #1084204436466962472
-        #974890751920074772
         channel = client.get_channel(int(os.getenv('CHANNEL')))
-        
-        global msg_id
-        global embed
-        queue_ID = 0
-        if message.channel == channel:
-            content = message.content.split()
-            if len(content) <= 0:
-                return
-            #adds new queue
-            if content[0] == "add":
-                try:
-                    queue_ID = int(content[1])
-                    guild = client.get_guild(int(os.getenv('GUILD')))
-                    raidchannel = client.get_channel(queue_ID)
-                    embeds[queue_ID] = discord.Embed(title="Queue " + raidchannel.name)
-                    embeds[queue_ID].add_field(name="Priority Users in Queue", value="1.")
-                    embeds[queue_ID].add_field(name="Normal Users in Queue", value="1.")
-                    msg = await channel.send(embed=embeds[queue_ID], view=JoinButton(queue_ID, guild))
-                    msg_id = msg.id
-                    print(msg_id)
-                except:
-                    print("not a valid integer ID")
-                    return
-                if queue_ID not in queues and queue_ID != 0:
-                    queues[queue_ID] = []
-                    queues[queue_ID].append(msg.id)
-                    queues[queue_ID].append([])
-                    queues[queue_ID].append([])
-                    cur.execute("INSERT INTO Queues(QID,MID) VALUES("+str(queue_ID) + ","+ str(msg_id) + ")")
-                    con.commit()
-
-                return
-            elif content[0] == "priority" and int(content[1]) not in priority:
-                roleID = int(content[1])
-                priority.append(roleID)
-                cur.execute("INSERT INTO Priority(PrioID) VALUES("+str(roleID)+ ")")
-                con.commit()
-                return
-            
-            elif content[0] == "join":
-                if int(content[1]) in queues and message.author not in queues[int(content[1])]:
-                    queues[int(content[1])][1].append(message.author)
-                    
-            elif content[0] == "leave":
-                if int(content[1]) in queues and message.author in queues[int(content[1])]:
-                    queues[int(content[1])][1].remove(message.author)
-            else:
-                return
-
 
         for queueID in queues:
             if client.get_channel(queueID) == message.channel:
