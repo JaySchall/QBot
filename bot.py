@@ -116,6 +116,17 @@ def run_bot():
     async def test(interaction: discord.Interaction):
         await interaction.response.send_message("pong")
 
+    @tree.command(name="listqueues", description="lists all queues")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def queuelist(interaction: discord.Interaction):
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        s = ""
+        for queue_ID in queues:
+            raidchannel = client.get_channel(queue_ID)
+            msg = await channel.fetch_message(queues[queue_ID][0])
+            s+=raidchannel.name+":\n" + msg.jump_url + "\n\n"
+        await interaction.response.send_message(s)
+
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioadd(interaction: discord.Interaction, number: str):
