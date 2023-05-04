@@ -9,7 +9,7 @@ queues = {}
 embeds = {}
 priority = []
 people = 3
-
+logging = 0
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -62,12 +62,18 @@ class JoinButton(discord.ui.View):
             if discord.utils.get(self.guild.roles, id=roleID) in user.roles:
                 queues[self.id][1].append(user) 
                 print(f"{user.mention} joined priority queue for " + raidchannel.name)
+                if logging != 0:
+                    logchannel = self.guild.get_channel(logging)
+                    await logchannel.send(f"{user.mention} joined priority queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
                 await updateEmbed(self.id, interaction.channel)
                 #await interaction.response.defer()
                 return
          #await interaction.response.send_message(f"{user.mention} joined queue", allowed_mentions=False)
          queues[self.id][2].append(user)
          print(f"{user.mention} joined normal queue for " + raidchannel.name)
+         if logging != 0:
+            logchannel = self.guild.get_channel(logging)
+            await logchannel.send(f"{user.mention} joined normal queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
          await updateEmbed(self.id, interaction.channel)
          #await interaction.response.defer()
 
@@ -83,24 +89,37 @@ class JoinButton(discord.ui.View):
             if discord.utils.get(self.guild.roles, id=roleID) in user.roles:
                 queues[self.id][1].remove(user)
                 print(f"{user.mention} left priority queue for " + raidchannel.name)
+                if logging != 0:
+                    logchannel = self.guild.get_channel(logging)
+                    await logchannel.send(f"{user.mention} left priority queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
                 await updateEmbed(self.id, interaction.channel)
                 #await interaction.response.defer()
                 return
          #await interaction.response.send_message(f"{user.mention} left queue" , allowed_mentions=discord.AllowedMentions.all)
          queues[self.id][2].remove(user)
          print(f"{user.mention} left normal queue for " + raidchannel.name)
+         if logging != 0:
+            logchannel = self.guild.get_channel(logging)
+            await logchannel.send(f"{user.mention} left normal queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
          await updateEmbed(self.id, interaction.channel)
         # await interaction.response.defer()
 
-async def on_raid(message, queueID, channel):
+async def on_raid(message, queueID, channel, guild):
+    s = message.content + "\n"
+    
     print(message.content)
     for i in range(0, people):
         if len(queues[queueID][1]) > 0:
             guy = queues[queueID][1].pop(0)
+            s+= str(i+1)+f". <@{guy.id}>" + "\n"
             await guy.send(message.content)
         elif len(queues[queueID][2]) > 0:
             guy = queues[queueID][2].pop(0)
+            s+= str(i+1)+f". <@{guy.id}>" + "\n"
             await guy.send(message.content)
+    if logging != 0:
+        logchannel = guild.get_channel(logging)
+        await logchannel.send(s, allowed_mentions = discord.AllowedMentions(users=False))
     await updateEmbed(queueID, channel)
 
 
@@ -112,9 +131,33 @@ def run_bot():
     tree = app_commands.CommandTree(client)
     guild = client.get_guild(int(os.getenv('GUILD')))
     channel = client.get_channel(int(os.getenv('CHANNEL')))
+    
+    @tree.command(name="setqueuelog", description="sets the channel for queue bot logging")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def qlog(interaction: discord.Interaction, number: str):
+        try:
+            number = int(number)
+            queuechannel = client.get_channel(number)
+            print(queuechannel.name)
+        except:
+            await interaction.response.send_message("invalid channel id")
+            return
+        global logging
+        logging = number
+        await interaction.response.send_message(queuechannel.name + " is now the logging channel")
+    
+    @tree.command(name="sync", description="sync commands")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def sync(interaction: discord.Interaction):
+
+        synced = await tree.sync()
+        await interaction.response.send_message(f"Synced {len(synced)} commands")
+    
     @tree.command(name="ping", description="testing")
-    async def test(interaction: discord.Interaction):
+    async def test(interaction: discord.Interaction): 
         await interaction.response.send_message("pong")
+
+    
 
     @tree.command(name="listqueues", description="lists all queues")
     @app_commands.checks.has_permissions(administrator = True)
@@ -230,7 +273,9 @@ def run_bot():
     async def on_ready():
         guild = client.get_guild(int(os.getenv('GUILD')))
         channel = client.get_channel(int(os.getenv('CHANNEL')))
-        await tree.sync(guild=guild)
+        print(guild.name)
+        #synced = await tree.sync()
+        #print(f"Synced {len(synced)} commands")
         print("up and running!")
         for entry in cur.execute("SELECT PrioID FROM Priority"):
             priority.append(entry[0])
@@ -251,13 +296,14 @@ def run_bot():
 
     @client.event
     async def on_message(message):
+        guild = client.get_guild(int(os.getenv('GUILD')))
         channel = client.get_channel(int(os.getenv('CHANNEL')))
 
         for queueID in queues:
             if client.get_channel(queueID) == message.channel:
                 if "Raid Code" in message.content:
                     
-                    await on_raid(message, queueID, channel)
+                    await on_raid(message, queueID, channel, guild)
                     
                 return
     
