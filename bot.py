@@ -132,9 +132,28 @@ def run_bot():
     guild = client.get_guild(int(os.getenv('GUILD')))
     channel = client.get_channel(int(os.getenv('CHANNEL')))
     
+    @tree.command(name="renamequeue", description="changes queue name")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def renameq(interaction: discord.Interaction, number: str, title: str):
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        try:
+            number = int(number)
+            queuechannel = client.get_channel(number)
+            print(queuechannel.name)
+        except:
+            await interaction.response.send_message("invalid channel id")
+            return
+        if number not in queues:
+            await interaction.response.send_message("raid channel doesn't have a queue")
+            return 
+        embeds[number].title = title
+        msg = await channel.fetch_message(queues[number][0])
+        await msg.edit(embed=embeds[number])  
+        await interaction.response.send_message(queuechannel.name + "queue is almost shown as " +title)
     @tree.command(name="setqueuelog", description="sets the channel for queue bot logging")
     @app_commands.checks.has_permissions(administrator = True)
     async def qlog(interaction: discord.Interaction, number: str):
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
         try:
             number = int(number)
             queuechannel = client.get_channel(number)
