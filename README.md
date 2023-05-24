@@ -23,18 +23,62 @@ This will run the queue bot.
 
 ## Commands
 
+To check if the bot is online, type:
+
+```sh
+/ping
+```
+
+To sync up any new commands, type:
+
+```sh
+/sync
+```
+
 To add a queue for a channel, get the channel ID of the channel. Then go into the channel you want the queues to be in and type:
 
 ```sh
-add channelID
+/addqueue number:channelID
 ```
 
 where channelID is the ID number for the channel.
 
+To remove a queue for a channel, get the channel ID of the channel. Then go into the channel you want the queues to be in and type:
+
+```sh
+/removequeue number:channelID
+```
+
 To add a priority role, get the role ID of the role. Then go into the channel you want the queues to be in and type:
 
 ```sh
-priority priorityID
+/addpriority number:priorityID
 ```
 
 where priorityID is the ID number for the role.
+
+To remove a priority role, get the role ID of the role. Then go into the channel you want the queues to be in and type:
+
+```sh
+/removepriority number:priorityID
+```
+
+To see all of the commands, type:
+
+```sh
+/listqueues
+```
+
+To set a channel as the logging channel, type:
+
+```sh
+/setqueuelog number:channelID
+```
+
+this currently has to be done each time the bot resets.
+
+To rename a queue, type:
+
+```sh
+/setqueuelog number:channelID title:channelName
+```
