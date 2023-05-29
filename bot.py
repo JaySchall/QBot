@@ -317,15 +317,18 @@ def run_bot():
     async def on_message(message):
         guild = client.get_guild(int(os.getenv('GUILD')))
         channel = client.get_channel(int(os.getenv('CHANNEL')))
+        notify = client.get_channel(int(os.getenv('NOTIFICATION')))
 
         for queueID in queues:
             if client.get_channel(queueID) == message.channel:
                 if "Raid Code" in message.content:
                     
                     await on_raid(message, queueID, channel, guild)
-                    
-                return
-    
+                    return
+                elif "Preparing parameter for" in message.content:
+                    await notify.send(message.content)
+                    return
+
 
     client.run(TOKEN)
 run_bot()
