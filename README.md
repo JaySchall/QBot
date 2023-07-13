@@ -19,6 +19,12 @@ In the command line, enter the directory the queue bot files are located in, and
 python bot.py
 ```
 
+For the first time running the bot, use the following instead:
+
+```sh
+python bot.py sync
+```
+
 This will run the queue bot.
 
 ## Commands
