@@ -1,3 +1,4 @@
+import sys
 import discord
 import sqlite3
 import os
@@ -13,7 +14,11 @@ logging = 0
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+startSync = False
 
+if len(sys.argv) > 1:
+    if sys.argv[1] == "sync":
+        startSync = True
 
 load_dotenv()
 embed = discord.Embed() 
@@ -290,6 +295,9 @@ def run_bot():
 
     @client.event
     async def on_ready():
+        if startSync == True:
+            synced = await tree.sync()
+            print(f"Synced {len(synced)} commands")
         guild = client.get_guild(int(os.getenv('GUILD')))
         channel = client.get_channel(int(os.getenv('CHANNEL')))
         print(guild.name)
