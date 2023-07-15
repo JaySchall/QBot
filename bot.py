@@ -286,7 +286,25 @@ def run_bot():
         cur.execute("DELETE FROM Queues WHERE QID = "+str(queue_ID))
         con.commit()
         await interaction.response.send_message(raidchannel.name + " queue has been removed")
-
+    @tree.command(name="setqueuethumbnail", description="sets the queue thumbnail image using a url")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def setthumbnail(interaction: discord.Interaction, number: str, thumbnail: str):
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        guild = client.get_guild(int(os.getenv('GUILD')))
+        try:
+            queue_ID = int(number)
+            raidchannel = client.get_channel(queue_ID)
+            print(raidchannel.name)
+        except:
+            await interaction.response.send_message("invalid channel id")
+            return
+        if queue_ID not in queues:
+            await interaction.response.send_message("channel doesn't have a queue")
+            return
+        embeds[queue_ID].set_thumbnail(url=thumbnail)
+        msg = await channel.fetch_message(queues[queue_ID][0])
+        await msg.edit(embed=embeds[queue_ID], view=JoinButton(queue_ID, guild))
+        await interaction.response.send_message("Thumbnail has been changed for queue " + number)
     @tree.error
     async def on_app_command_error(interaction, error):
         if isinstance(error, app_commands.MissingPermissions):
