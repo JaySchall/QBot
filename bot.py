@@ -15,6 +15,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 startSync = False
+sillyMode = False
 
 if len(sys.argv) > 1:
     if sys.argv[1] == "sync":
@@ -260,6 +261,7 @@ def run_bot():
         queues[queue_ID].append(msg.id)
         queues[queue_ID].append([])
         queues[queue_ID].append([])
+        queues[queue_ID].append(True)
         cur.execute("INSERT INTO Queues(QID,MID) VALUES("+str(queue_ID) + ","+ str(msg_id) + ")")
         con.commit()
         await interaction.response.send_message(raidchannel.name + " queue has been created")
@@ -305,11 +307,56 @@ def run_bot():
         msg = await channel.fetch_message(queues[queue_ID][0])
         await msg.edit(embed=embeds[queue_ID], view=JoinButton(queue_ID, guild))
         await interaction.response.send_message("Thumbnail has been changed for queue " + number)
+    @tree.command(name="enablequeue", description="enable a disabled queue")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def enable(interaction: discord.Interaction, number: str):
+        try:
+            queue_ID = int(number)
+            raidchannel = client.get_channel(queue_ID)
+            print(raidchannel.name)
+        except:
+            await interaction.response.send_message("invalid raid channel id")
+            return
+        if queue_ID not in queues:
+            await interaction.response.send_message("raid channel doesn't have a queue")
+            return
+        if queues[queue_ID][3] == True:
+            await interaction.response.send_message("queue is already active")
+            return
+        queues[queue_ID][3] = True
+        await interaction.response.send_message("Queue enabled")
+    @tree.command(name="disablequeue", description="disable a queue")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def disable(interaction: discord.Interaction, number: str):
+        try:
+            queue_ID = int(number)
+            raidchannel = client.get_channel(queue_ID)
+            print(raidchannel.name)
+        except:
+            await interaction.response.send_message("invalid raid channel id")
+            return
+        if queue_ID not in queues:
+            await interaction.response.send_message("raid channel doesn't have a queue")
+            return
+        if queues[queue_ID][3] == False:
+            await interaction.response.send_message("queue is already disabled")
+            return
+        queues[queue_ID][3] = False
+        await interaction.response.send_message("Queue disabled")
     @tree.error
     async def on_app_command_error(interaction, error):
         if isinstance(error, app_commands.MissingPermissions):
             await interaction.response.send_message(error)
-
+    @tree.command(name="sillytoggle", description="Toggles the sillies, obviously")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def silly(interaction: discord.Interaction):
+        global sillyMode
+        if sillyMode == True:
+            sillyMode = False
+            await interaction.response.send_message("No more sillies :(", ephemeral=True)
+        else:
+            sillyMode = True
+            await interaction.response.send_message("Silly time", ephemeral=True)
 
     @client.event
     async def on_ready():
@@ -335,6 +382,7 @@ def run_bot():
             queues[entry[0]].append(entry[1])
             queues[entry[0]].append([])
             queues[entry[0]].append([])
+            queues[entry[0]].append(True)
             msg = await channel.fetch_message(entry[1])
             await msg.edit(embed=embeds[entry[0]], view=JoinButton(entry[0], guild))
             print("Initiated Queue " + raidchannel.name + " with ID: " + str(entry[0]))
