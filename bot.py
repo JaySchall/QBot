@@ -56,6 +56,9 @@ class JoinButton(discord.ui.View):
          self.timeout=None
      @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
      async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
+         if queues[self.id][3] == False:
+             await interaction.response.send_message("Queue is currently closed, try again later", ephemeral=True)
+             return
          await interaction.response.edit_message(embed=embeds[self.id])
          user = interaction.user
          for queueID in queues:
@@ -328,6 +331,7 @@ def run_bot():
     @tree.command(name="disablequeue", description="disable a queue")
     @app_commands.checks.has_permissions(administrator = True)
     async def disable(interaction: discord.Interaction, number: str):
+        channel = client.get_channel(int(os.getenv('CHANNEL')))
         try:
             queue_ID = int(number)
             raidchannel = client.get_channel(queue_ID)
@@ -342,6 +346,9 @@ def run_bot():
             await interaction.response.send_message("queue is already disabled")
             return
         queues[queue_ID][3] = False
+        queues[queue_ID][1] = []
+        queues[queue_ID][2] = []
+        await updateEmbed(queue_ID, channel)
         await interaction.response.send_message("Queue disabled")
     @tree.error
     async def on_app_command_error(interaction, error):
