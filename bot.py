@@ -21,5 +21,16 @@ def run_bot():
         synced = await tree.sync()
         await interaction.response.send_message(f"Synced {len(synced)} commands")
 
+    @tree.error
+    async def on_app_command_error(interaction, error):
+        if isinstance(error, app_commands.MissingPermissions):
+            await interaction.response.send_message(error)
+
+    @client.event
+    async def on_message(message):
+        if client.get_channel(settings.queueChannel) == message.channel:
+            if settings.raidString in message.content:
+                print("")
+
 if __name__ == "__main__":
     run_bot()
