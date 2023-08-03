@@ -24,6 +24,10 @@ class JoinButton(discord.ui.View):
         if user in queue:
             await interaction.response.send_message("You are already in queue", ephemeral=True)
             return
+        guild = self.client.get_guild(settings.queueServer)
+        for roleID in priority:
+            if discord.utils.get(guild.roles, id=roleID) in user.roles:
+                priorityUsers.append(user)
         queue.append(user)
         print(f"{user.mention} joined queue")
         await updateEmbeds(self.client)
@@ -36,6 +40,10 @@ class JoinButton(discord.ui.View):
         if user not in queue:
             await interaction.response.send_message("You already not in queue", ephemeral=True)
             return
+        guild = self.client.get_guild(settings.queueServer)
+        for roleID in priority:
+            if discord.utils.get(guild.roles, id=roleID) in user.roles:
+                priorityUsers.remove(user)
         queue.remove(user)
         print(f"{user.mention} left queue")
         await updateEmbeds(self.client)
@@ -46,8 +54,10 @@ async def updateEmbeds(client):
     s = ""
     i = 1
     for dude in queue:
-        
-        s += str(i) + ". " +  f"<@{dude.id}>" + "\n"
+        if dude in priorityUsers:
+            s += str(i) + ". <:Shiny:1123782221778669629> " +  f"<@{dude.id}>" + "\n"
+        else:
+            s += str(i) + ". " +  f"<@{dude.id}>" + "\n"
         i+=1
     embed.add_field(name="Users in Queue", value=s)
     for id in embedMessages:
@@ -57,16 +67,18 @@ async def updateEmbeds(client):
         print("an attempt")
 
 async def onRaid(message, client):
-    patreonsPulled = 0
+    priorityPulled = 0
     s = message.content + "\n"
     for i in range(0, 3):
-        if patreonsPulled < patreonsPulled and len(priorityUsers) > 0:
+        if priorityPulled < settings.prioritySlots and len(priorityUsers) > 0:
             guy = priorityUsers.pop(0)
             queue.remove(guy)
             await guy.send(message.content)
+            print("Pulled From Priority")
         elif len(queue) > 0:
             guy = queue.pop(0)
             await guy.send(message.content)
+            print("Pulled From Normal")
     await updateEmbeds(client)
         
 def run_bot():
@@ -108,6 +120,40 @@ def run_bot():
             msg = await channel.fetch_message(embedMessages[id])
             s+=channel.name+":\n" + msg.jump_url + "\n\n"
         await interaction.response.send_message(s)
+
+    @tree.command(name="addpriority", description="adds a new priority role")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def prioadd(interaction: discord.Interaction, number: str):
+        guild = client.get_guild(settings.queueServer)
+        try:
+            number = int(number)
+            role = discord.utils.get(guild.roles, id=number)
+            print(role.name)
+        except:
+            await interaction.response.send_message("invalid role id")
+            return
+        if number in priority:
+            await interaction.response.send_message("role is already a priority role")
+            return
+        priority.append(number)
+        await interaction.response.send_message(role.name + " added to priority roles")
+
+    @tree.command(name="removepriority", description="removes a priority role")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def prioremove(interaction: discord.Interaction, number: str):
+        guild = client.get_guild(settings.queueServer)
+        try:
+            number = int(number)
+            role = discord.utils.get(guild.roles, id=number)
+            print(role.name)
+        except:
+            await interaction.response.send_message("invalid role id")
+            return
+        if number not in priority:
+            await interaction.response.send_message("role is not a priority role")
+            return
+        priority.remove(number)
+        await interaction.response.send_message(role.name + " removed from priority roles")
 
     @tree.error
     async def on_app_command_error(interaction, error):
