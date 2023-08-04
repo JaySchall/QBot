@@ -1,3 +1,4 @@
+import enum
 import sys
 import discord
 import sqlite3
@@ -12,6 +13,10 @@ embedMessages = {}
 priority = []
 queue = []
 priorityUsers = []
+queueEnabled = True
+class toggle(enum.Enum):
+    enable = 1
+    disable = 0
 
 class JoinButton(discord.ui.View):
      def __init__(self, client):
@@ -20,6 +25,9 @@ class JoinButton(discord.ui.View):
          self.client = client
      @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
      async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if queueEnabled == False:
+             await interaction.response.send_message("Queue is currently closed, try again later", ephemeral=True)
+             return
         user = interaction.user
         if user in queue:
             await interaction.response.send_message("You are already in queue", ephemeral=True)
@@ -102,14 +110,26 @@ def run_bot():
 
     @tree.command(name="createembed", description="creates an embed used to join and leave the queue")
     @app_commands.checks.has_permissions(administrator = True)
-    async def sync(interaction: discord.Interaction):
+    async def createembed(interaction: discord.Interaction):
         channel = interaction.channel
-        if channel in embedMessages:
+        if channel.id in embedMessages:
             await interaction.response.send_message(f"Channel already has an embed")
             return
         msg = await channel.send(embed=embed, view=JoinButton(client))
         embedMessages[channel.id] = msg.id
         await interaction.response.send_message(f"Created embed")
+
+    @tree.command(name="removeembed", description="deletes an embed used to join and leave the queue")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def removeembed(interaction: discord.Interaction):
+        channel = interaction.channel
+        if channel.id not in embedMessages:
+            await interaction.response.send_message(f"Channel doesn't have an embed")
+            return
+        msg = await channel.fetch_message(embedMessages[channel.id])
+        await msg.delete()
+        del embedMessages[channel.id]
+        await interaction.response.send_message(f"Removed embed")
 
     @tree.command(name="viewembeds", description="see where the embeds are located")
     @app_commands.checks.has_permissions(administrator = True)
@@ -155,6 +175,19 @@ def run_bot():
         priority.remove(number)
         await interaction.response.send_message(role.name + " removed from priority roles")
 
+    @tree.command(name="togglequeue", description="toggles the queue on or off")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def togglequeue(interaction: discord.Interaction, toggle: toggle):
+        global queueEnabled, queue, priorityUsers
+        if toggle.value == 1:
+            queueEnabled = True
+            await interaction.response.send_message("enabled queue")
+        elif toggle.value == 0:
+            queue = []
+            priorityUsers = []
+            queueEnabled = False
+            await updateEmbeds(client)
+            await interaction.response.send_message("disabled queue")
     @tree.error
     async def on_app_command_error(interaction, error):
         if isinstance(error, app_commands.MissingPermissions):
