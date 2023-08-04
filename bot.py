@@ -7,6 +7,8 @@ from discord import app_commands
 from dotenv import load_dotenv
 import settings
 
+con = sqlite3.connect("Queue.sqlite3")
+cur = con.cursor()
 embed = discord.Embed(title="Queue")
 embed.add_field(name="Users in Queue", value="1.")
 embedMessages = {}
@@ -33,8 +35,9 @@ class JoinButton(discord.ui.View):
             await interaction.response.send_message("You are already in queue", ephemeral=True)
             return
         guild = self.client.get_guild(settings.queueServer)
+        roleUser = guild.get_member(user.id)
         for roleID in priority:
-            if discord.utils.get(guild.roles, id=roleID) in user.roles:
+            if roleUser is not None and discord.utils.get(guild.roles, id=roleID) in roleUser.roles:
                 priorityUsers.append(user)
         queue.append(user)
         print(f"{user.mention} joined queue")
@@ -71,7 +74,7 @@ async def updateEmbeds(client):
     for id in embedMessages:
         channel = client.get_channel(id)
         msg = await channel.fetch_message(embedMessages[id])
-        await msg.edit(embed=embed)
+        await msg.edit(embed=embed, view=JoinButton(client))
         print("an attempt")
 
 async def onRaid(message, client):
@@ -97,7 +100,15 @@ def run_bot():
 
     @client.event
     async def on_ready():
-        print("HAIII")
+        print("Bot up and running")
+        guild = client.get_guild(settings.queueServer)
+        for entry in cur.execute("SELECT PrioID FROM Priority"):
+            priority.append(entry[0])
+            role = discord.utils.get(guild.roles, id=entry[0])
+            print("Initiated role " + role.name + " with ID: " +  str(entry[0]) + " in priority queue")
+        for entry in cur.execute("SELECT ChannelID, MessageID FROM Embeds"):
+            embedMessages[entry[0]] = entry[1]
+        await updateEmbeds(client)
         #synced = await tree.sync()
         #print(f"Synced {len(synced)} commands")
 
@@ -115,8 +126,11 @@ def run_bot():
         if channel.id in embedMessages:
             await interaction.response.send_message(f"Channel already has an embed")
             return
+        
         msg = await channel.send(embed=embed, view=JoinButton(client))
         embedMessages[channel.id] = msg.id
+        cur.execute("INSERT INTO Embeds(ChannelID,MessageID) VALUES("+str(channel.id) + ","+ str(msg.id) + ")")
+        con.commit()
         await interaction.response.send_message(f"Created embed")
 
     @tree.command(name="removeembed", description="deletes an embed used to join and leave the queue")
@@ -129,6 +143,8 @@ def run_bot():
         msg = await channel.fetch_message(embedMessages[channel.id])
         await msg.delete()
         del embedMessages[channel.id]
+        cur.execute("DELETE FROM Embeds WHERE ChannelID = "+str(channel.id))
+        con.commit()
         await interaction.response.send_message(f"Removed embed")
 
     @tree.command(name="viewembeds", description="see where the embeds are located")
@@ -155,6 +171,8 @@ def run_bot():
         if number in priority:
             await interaction.response.send_message("role is already a priority role")
             return
+        cur.execute("INSERT INTO Priority(PrioID) VALUES("+str(number)+ ")")
+        con.commit()
         priority.append(number)
         await interaction.response.send_message(role.name + " added to priority roles")
 
@@ -172,6 +190,8 @@ def run_bot():
         if number not in priority:
             await interaction.response.send_message("role is not a priority role")
             return
+        cur.execute("DELETE FROM Priority WHERE PrioID = "+str(number))
+        con.commit()
         priority.remove(number)
         await interaction.response.send_message(role.name + " removed from priority roles")
 
