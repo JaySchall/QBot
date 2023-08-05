@@ -231,6 +231,20 @@ def run_bot():
         #os.environ['QUEUE_CHANNEL'] = str(number)
         await interaction.response.send_message("Changed raid channel to " + raidchannel.name)
 
+    @tree.command(name="setloggingchannel", description="changes logging channel to inputted one")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def loggingchannel(interaction: discord.Interaction, number: str):
+        try:
+            number = int(number)
+            loggingchannel = client.get_channel(number)
+            print(loggingchannel.name)
+        except:
+            await interaction.response.send_message("invalid logging channel id")
+            return
+        settings.loggingChannel = number
+        set_key(".env", 'LOGGING_CHANNEL', str(number))
+        await interaction.response.send_message("Changed logging channel to " + loggingchannel.name)
+
     @tree.command(name="setqueuename", description="changes queue name to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def queuename(interaction: discord.Interaction, name: str):
@@ -239,6 +253,13 @@ def run_bot():
         #os.environ['QUEUE_NAME'] = name
         await interaction.response.send_message("Changed queue title to " + name)
         await updateEmbeds(client)
+
+    @tree.command(name="setraidtrigger", description="changes the keyword used to find raid codes")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def raidtrigger(interaction: discord.Interaction, key: str):
+        settings.raidString = key
+        set_key(".env", 'RAID_CODE_IDENTIFIER', key)
+        await interaction.response.send_message("Changed raid trigger to " + key)
 
     @tree.error
     async def on_app_command_error(interaction, error):
