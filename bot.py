@@ -1,5 +1,5 @@
 import enum
-import sys
+from dotenv import set_key
 import discord
 import sqlite3
 import os
@@ -215,6 +215,31 @@ def run_bot():
             queueEnabled = False
             await updateEmbeds(client)
             await interaction.response.send_message("disabled queue")
+    
+    @tree.command(name="setqueuechannel", description="changes queue channel to inputted one")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def queuechannel(interaction: discord.Interaction, number: str):
+        try:
+            number = int(number)
+            raidchannel = client.get_channel(number)
+            print(raidchannel.name)
+        except:
+            await interaction.response.send_message("invalid raid channel id")
+            return
+        settings.queueChannel = number
+        set_key(".env", 'QUEUE_CHANNEL', str(number))
+        #os.environ['QUEUE_CHANNEL'] = str(number)
+        await interaction.response.send_message("Changed raid channel to " + raidchannel.name)
+
+    @tree.command(name="setqueuename", description="changes queue name to inputted one")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def queuename(interaction: discord.Interaction, name: str):
+        embed.title = name
+        set_key(".env", 'QUEUE_NAME', name)
+        #os.environ['QUEUE_NAME'] = name
+        await interaction.response.send_message("Changed queue title to " + name)
+        await updateEmbeds(client)
+
     @tree.error
     async def on_app_command_error(interaction, error):
         if isinstance(error, app_commands.MissingPermissions):
