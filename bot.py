@@ -161,6 +161,9 @@ def run_bot():
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioadd(interaction: discord.Interaction, number: str):
+        if queueEnabled == True:
+            await interaction.response.send_message("Queue must be disabled in order to change priority roles")
+            return
         guild = client.get_guild(settings.queueServer)
         try:
             number = int(number)
@@ -180,6 +183,9 @@ def run_bot():
     @tree.command(name="removepriority", description="removes a priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioremove(interaction: discord.Interaction, number: str):
+        if queueEnabled == True:
+            await interaction.response.send_message("Queue must be disabled in order to change priority roles")
+            return
         guild = client.get_guild(settings.queueServer)
         try:
             number = int(number)
