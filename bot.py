@@ -9,7 +9,7 @@ import settings
 
 con = sqlite3.connect("Queue.sqlite3")
 cur = con.cursor()
-embed = discord.Embed(title="Queue")
+embed = discord.Embed(title=settings.queueName)
 embed.add_field(name="Users in Queue", value="1.")
 embedMessages = {}
 priority = []
@@ -82,6 +82,7 @@ async def onRaid(message, client):
     s = message.content + "\n"
     for i in range(0, 3):
         if priorityPulled < settings.prioritySlots and len(priorityUsers) > 0:
+            priorityPulled+=1
             guy = priorityUsers.pop(0)
             queue.remove(guy)
             await guy.send(message.content)

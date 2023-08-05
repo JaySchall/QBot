@@ -9,5 +9,5 @@ queueChannel = int(os.getenv('QUEUE_CHANNEL'))
 loggingChannel = int(os.getenv('LOGGING_CHANNEL'))
 
 raidString = os.getenv('RAID_CODE_IDENTIFIER')
-prioritySlots = 3
-#queueName = ""
+prioritySlots = int(os.getenv('PRIORITY_NUMBER'))
+queueName = os.getenv('QUEUE_NAME')
