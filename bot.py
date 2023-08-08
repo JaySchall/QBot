@@ -215,7 +215,13 @@ def run_bot():
             queueEnabled = False
             await updateEmbeds(client)
             await interaction.response.send_message("disabled queue")
-    
+
+    @tree.command(name="setqueuethumbnail", description="sets the queue thumbnail image using a url")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def setthumbnail(interaction: discord.Interaction, thumbnail: str):
+        embed.set_thumbnail(url=thumbnail)
+        await updateEmbeds(client)
+        await interaction.response.send_message("set thumbnail to " + thumbnail)
     @tree.command(name="setqueuechannel", description="changes queue channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def queuechannel(interaction: discord.Interaction, number: str):
