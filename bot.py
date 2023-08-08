@@ -1,3 +1,4 @@
+import sys
 import enum
 from dotenv import set_key
 import discord
@@ -16,6 +17,12 @@ priority = []
 queue = []
 priorityUsers = []
 queueEnabled = True
+startSync = False
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == "sync":
+        startSync = True
+
 class toggle(enum.Enum):
     enable = 1
     disable = 0
@@ -102,6 +109,9 @@ def run_bot():
     @client.event
     async def on_ready():
         print("Bot up and running")
+        if startSync == True:
+            synced = await tree.sync()
+            print(f"Synced {len(synced)} commands")
         guild = client.get_guild(settings.queueServer)
         for entry in cur.execute("SELECT PrioID FROM Priority"):
             priority.append(entry[0])
@@ -110,8 +120,6 @@ def run_bot():
         for entry in cur.execute("SELECT ChannelID, MessageID FROM Embeds"):
             embedMessages[entry[0]] = entry[1]
         await updateEmbeds(client)
-        #synced = await tree.sync()
-        #print(f"Synced {len(synced)} commands")
 
     @tree.command(name="sync", description="sync commands")
     @app_commands.checks.has_permissions(administrator = True)
