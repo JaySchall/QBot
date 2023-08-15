@@ -1,3 +1,4 @@
+from typing import Literal
 import sys
 import enum
 from dotenv import set_key
@@ -34,6 +35,7 @@ class JoinButton(discord.ui.View):
          self.client = client
      @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
      async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
+        logChannel = self.client.get_channel(settings.loggingChannel)
         if queueEnabled == False:
              await interaction.response.send_message("Queue is currently closed, try again later", ephemeral=True)
              return
@@ -48,12 +50,14 @@ class JoinButton(discord.ui.View):
                 priorityUsers.append(user)
         queue.append(user)
         print(f"{user.mention} joined queue")
+        await logChannel.send(f"{user.mention} joined queue", allowed_mentions = discord.AllowedMentions(users=False))
         await updateEmbeds(self.client)
         await interaction.response.send_message("You have joined the queue", ephemeral=True)
          
 
      @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
      async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
+        logChannel = self.client.get_channel(settings.loggingChannel)
         user = interaction.user
         if user not in queue:
             await interaction.response.send_message("You already not in queue", ephemeral=True)
@@ -64,6 +68,7 @@ class JoinButton(discord.ui.View):
                 priorityUsers.remove(user)
         queue.remove(user)
         print(f"{user.mention} left queue")
+        await logChannel.send(f"{user.mention} left queue", allowed_mentions = discord.AllowedMentions(users=False))
         await updateEmbeds(self.client)
         await interaction.response.send_message("You have left the queue", ephemeral=True)
 
@@ -93,11 +98,15 @@ async def onRaid(message, client):
             guy = priorityUsers.pop(0)
             queue.remove(guy)
             await guy.send(message.content)
+            s+= str(i+1)+f". <@{guy.id}>" + "\n"
             print("Pulled From Priority")
         elif len(queue) > 0:
             guy = queue.pop(0)
             await guy.send(message.content)
+            s+= str(i+1)+f". <@{guy.id}>" + "\n"
             print("Pulled From Normal")
+    logChannel = client.get_channel(settings.loggingChannel)
+    await logChannel.send(s, allowed_mentions = discord.AllowedMentions(users=False))
     await updateEmbeds(client)
         
 def run_bot():
@@ -275,6 +284,14 @@ def run_bot():
         set_key(".env", 'RAID_CODE_IDENTIFIER', key)
         await interaction.response.send_message("Changed raid trigger to " + key)
 
+    @tree.command(name="setprioritypulled", description="changes how many priority members are prioritized each raid")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def prioritypulled(interaction: discord.Interaction, number: Literal[0, 1, 2, 3]):
+        settings.prioritySlots = number  
+        set_key(".env", 'PRIORITY_NUMBER', str(number))
+        print(number)
+        await interaction.response.send_message("Changed number to prioritize to " + str(number))
+
     @tree.error
     async def on_app_command_error(interaction, error):
         if isinstance(error, app_commands.MissingPermissions):
@@ -283,8 +300,8 @@ def run_bot():
     @client.event
     async def on_message(message):
         if client.get_channel(settings.queueChannel) == message.channel:
-            print(message.content)
-            if settings.raidString in message.content:
+            #print(message.content)
+            if settings.raidString in message.content and message.author.id != client.user.id:
                 await onRaid(message, client)
                 print("HI OMG SOMETHING HAPPENED")
 
