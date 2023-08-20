@@ -102,6 +102,8 @@ async def onRaid(message, client):
             print("Pulled From Priority")
         elif len(queue) > 0:
             guy = queue.pop(0)
+            if guy in priorityUsers:
+                priorityUsers.remove(guy)
             await guy.send(message.content)
             s+= str(i+1)+f". <@{guy.id}>" + "\n"
             print("Pulled From Normal")
