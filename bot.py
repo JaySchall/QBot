@@ -135,7 +135,9 @@ def run_bot():
     @tree.command(name="sync", description="sync commands")
     @app_commands.checks.has_permissions(administrator = True)
     async def sync(interaction: discord.Interaction):
-
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         synced = await tree.sync()
         await interaction.response.send_message(f"Synced {len(synced)} commands")
 
@@ -180,6 +182,9 @@ def run_bot():
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioadd(interaction: discord.Interaction, number: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         if queueEnabled == True:
             await interaction.response.send_message("Queue must be disabled in order to change priority roles")
             return
@@ -202,6 +207,9 @@ def run_bot():
     @tree.command(name="removepriority", description="removes a priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioremove(interaction: discord.Interaction, number: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         if queueEnabled == True:
             await interaction.response.send_message("Queue must be disabled in order to change priority roles")
             return
@@ -224,6 +232,9 @@ def run_bot():
     @tree.command(name="togglequeue", description="toggles the queue on or off")
     @app_commands.checks.has_permissions(administrator = True)
     async def togglequeue(interaction: discord.Interaction, toggle: toggle):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         global queueEnabled, queue, priorityUsers
         if toggle.value == 1:
             queueEnabled = True
@@ -238,12 +249,18 @@ def run_bot():
     @tree.command(name="setqueuethumbnail", description="sets the queue thumbnail image using a url")
     @app_commands.checks.has_permissions(administrator = True)
     async def setthumbnail(interaction: discord.Interaction, thumbnail: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         embed.set_thumbnail(url=thumbnail)
         await updateEmbeds(client)
         await interaction.response.send_message("set thumbnail to " + thumbnail)
     @tree.command(name="setqueuechannel", description="changes queue channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def queuechannel(interaction: discord.Interaction, number: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         try:
             number = int(number)
             raidchannel = client.get_channel(number)
@@ -259,6 +276,9 @@ def run_bot():
     @tree.command(name="setloggingchannel", description="changes logging channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def loggingchannel(interaction: discord.Interaction, number: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         try:
             number = int(number)
             loggingchannel = client.get_channel(number)
@@ -273,6 +293,9 @@ def run_bot():
     @tree.command(name="setqueuename", description="changes queue name to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def queuename(interaction: discord.Interaction, name: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         embed.title = name
         set_key(".env", 'QUEUE_NAME', name)
         #os.environ['QUEUE_NAME'] = name
@@ -282,6 +305,9 @@ def run_bot():
     @tree.command(name="setraidtrigger", description="changes the keyword used to find raid codes")
     @app_commands.checks.has_permissions(administrator = True)
     async def raidtrigger(interaction: discord.Interaction, key: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         settings.raidString = key
         set_key(".env", 'RAID_CODE_IDENTIFIER', key)
         await interaction.response.send_message("Changed raid trigger to " + key)
@@ -289,6 +315,9 @@ def run_bot():
     @tree.command(name="setprioritypulled", description="changes how many priority members are prioritized each raid")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioritypulled(interaction: discord.Interaction, number: Literal[0, 1, 2, 3]):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         settings.prioritySlots = number  
         set_key(".env", 'PRIORITY_NUMBER', str(number))
         print(number)
