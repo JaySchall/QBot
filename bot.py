@@ -87,7 +87,7 @@ async def updateEmbeds(client):
         channel = client.get_channel(id)
         msg = await channel.fetch_message(embedMessages[id])
         await msg.edit(embed=embed, view=JoinButton(client))
-        print("an attempt")
+        print("updated embed in " + channel.name)
 
 async def onRaid(message, client):
     priorityPulled = 0
@@ -192,7 +192,7 @@ def run_bot():
         try:
             number = int(number)
             role = discord.utils.get(guild.roles, id=number)
-            print(role.name)
+            print("Role:" + role.name)
         except:
             await interaction.response.send_message("invalid role id")
             return
@@ -217,7 +217,7 @@ def run_bot():
         try:
             number = int(number)
             role = discord.utils.get(guild.roles, id=number)
-            print(role.name)
+            print("Role:" + role.name)
         except:
             await interaction.response.send_message("invalid role id")
             return
@@ -264,7 +264,7 @@ def run_bot():
         try:
             number = int(number)
             raidchannel = client.get_channel(number)
-            print(raidchannel.name)
+            print("New raid channel: " + raidchannel.name)
         except:
             await interaction.response.send_message("invalid raid channel id")
             return
@@ -282,7 +282,7 @@ def run_bot():
         try:
             number = int(number)
             loggingchannel = client.get_channel(number)
-            print(loggingchannel.name)
+            print("New logging channel: " + loggingchannel.name)
         except:
             await interaction.response.send_message("invalid logging channel id")
             return
@@ -320,7 +320,7 @@ def run_bot():
             return
         settings.prioritySlots = number  
         set_key(".env", 'PRIORITY_NUMBER', str(number))
-        print(number)
+        print("New priority number: " + str(number))
         await interaction.response.send_message("Changed number to prioritize to " + str(number))
 
     @tree.error
@@ -334,7 +334,7 @@ def run_bot():
             #print(message.content)
             if settings.raidString in message.content and message.author.id != client.user.id:
                 await onRaid(message, client)
-                print("HI OMG SOMETHING HAPPENED")
+                print("Found message " + message.content)
 
     client.run(settings.TOKEN)
 if __name__ == "__main__":
