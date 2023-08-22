@@ -52,7 +52,9 @@ class JoinButton(discord.ui.View):
         print(f"{user.mention} joined queue")
         await logChannel.send(f"{user.mention} joined queue", allowed_mentions = discord.AllowedMentions(users=False))
         await updateEmbeds(self.client)
-        await interaction.response.send_message("You have joined the queue", ephemeral=True)
+        await interaction.response.defer()
+
+        #await interaction.response.send_message("You have joined the queue", ephemeral=True)
          
 
      @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
@@ -70,7 +72,8 @@ class JoinButton(discord.ui.View):
         print(f"{user.mention} left queue")
         await logChannel.send(f"{user.mention} left queue", allowed_mentions = discord.AllowedMentions(users=False))
         await updateEmbeds(self.client)
-        await interaction.response.send_message("You have left the queue", ephemeral=True)
+        await interaction.response.defer()
+        #await interaction.response.send_message("You have left the queue", ephemeral=True)
 
 async def updateEmbeds(client):
     embed.remove_field(index=0)
