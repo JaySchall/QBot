@@ -1,415 +1,344 @@
+from typing import Literal
 import sys
+import enum
+from dotenv import set_key
 import discord
 import sqlite3
 import os
 from discord import app_commands
 from dotenv import load_dotenv
+import settings
+
 con = sqlite3.connect("Queue.sqlite3")
 cur = con.cursor()
-queues = {}
-embeds = {}
+embed = discord.Embed(title=settings.queueName)
+embed.add_field(name="Users in Queue", value="1.")
+embedMessages = {}
 priority = []
-people = 3
-logging = 0
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
+queue = []
+priorityUsers = []
+queueEnabled = True
 startSync = False
-sillyMode = False
 
 if len(sys.argv) > 1:
     if sys.argv[1] == "sync":
         startSync = True
 
-load_dotenv()
-embed = discord.Embed() 
-
-async def updateEmbed(queueID, channel): 
-
-    embeds[queueID].remove_field(index=0)
-    embeds[queueID].remove_field(index=0)
-    s = ""
-    i = 1
-    for dude in queues[queueID][1]:
-        
-        s += str(i) + ". " +  f"<@{dude.id}>" + "\n"
-        i+=1
-    embeds[queueID].add_field(name="Priority Users in Queue", value=s)
-    s = ""
-    i = 1
-    for dude in queues[queueID][2]:
-        
-        s += str(i) + ". " +  f"<@{dude.id}>" + "\n"
-        i+=1
-    embeds[queueID].add_field(name="Normal Users in Queue", value=s)        
-    msg = await channel.fetch_message(queues[queueID][0])
-    await msg.edit(embed=embeds[queueID])
-    
-
-
+class toggle(enum.Enum):
+    enable = 1
+    disable = 0
 
 class JoinButton(discord.ui.View):
-     def __init__(self, id, guild):
+     def __init__(self, client):
          super().__init__()
-         self.id = id
-         self.guild = guild
          self.timeout=None
+         self.client = client
      @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
      async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
-         if queues[self.id][3] == False:
+        logChannel = self.client.get_channel(settings.loggingChannel)
+        if queueEnabled == False:
              await interaction.response.send_message("Queue is currently closed, try again later", ephemeral=True)
              return
-         await interaction.response.edit_message(embed=embeds[self.id])
-         user = interaction.user
-         for queueID in queues:
-            if user in queues[queueID][1] or user in queues[queueID][2]:
-                #await interaction.response.defer()
-                return
-            
-         raidchannel = self.guild.get_channel(self.id)
-         for roleID in priority:
-            if discord.utils.get(self.guild.roles, id=roleID) in user.roles:
-                queues[self.id][1].append(user) 
-                print(f"{user.mention} joined priority queue for " + raidchannel.name)
-                if logging != 0:
-                    logchannel = self.guild.get_channel(logging)
-                    await logchannel.send(f"{user.mention} joined priority queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
-                await updateEmbed(self.id, interaction.channel)
-                #await interaction.response.defer()
-                return
-         #await interaction.response.send_message(f"{user.mention} joined queue", allowed_mentions=False)
-         queues[self.id][2].append(user)
-         print(f"{user.mention} joined normal queue for " + raidchannel.name)
-         if logging != 0:
-            logchannel = self.guild.get_channel(logging)
-            await logchannel.send(f"{user.mention} joined normal queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
-         await updateEmbed(self.id, interaction.channel)
-         #await interaction.response.defer()
+        user = interaction.user
+        if user in queue:
+            await interaction.response.send_message("You are already in queue", ephemeral=True)
+            return
+        guild = self.client.get_guild(settings.queueServer)
+        roleUser = guild.get_member(user.id)
+        for roleID in priority:
+            if roleUser is not None and discord.utils.get(guild.roles, id=roleID) in roleUser.roles:
+                priorityUsers.append(user)
+        queue.append(user)
+        print(f"{user.mention} joined queue")
+        await logChannel.send(f"{user.mention} joined queue", allowed_mentions = discord.AllowedMentions(users=False))
+        await updateEmbeds(self.client)
+        await interaction.response.defer()
+
+        #await interaction.response.send_message("You have joined the queue", ephemeral=True)
+         
 
      @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
      async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
-         await interaction.response.edit_message(embed=embeds[self.id])
-         user = interaction.user
-         if user not in queues[self.id][1] and user not in queues[self.id][2]:
-            #await interaction.response.defer()
+        logChannel = self.client.get_channel(settings.loggingChannel)
+        user = interaction.user
+        if user not in queue:
+            await interaction.response.send_message("You already not in queue", ephemeral=True)
             return
-         raidchannel = self.guild.get_channel(self.id)
-         for roleID in priority:
-            if discord.utils.get(self.guild.roles, id=roleID) in user.roles:
-                queues[self.id][1].remove(user)
-                print(f"{user.mention} left priority queue for " + raidchannel.name)
-                if logging != 0:
-                    logchannel = self.guild.get_channel(logging)
-                    await logchannel.send(f"{user.mention} left priority queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
-                await updateEmbed(self.id, interaction.channel)
-                #await interaction.response.defer()
-                return
-         #await interaction.response.send_message(f"{user.mention} left queue" , allowed_mentions=discord.AllowedMentions.all)
-         queues[self.id][2].remove(user)
-         print(f"{user.mention} left normal queue for " + raidchannel.name)
-         if logging != 0:
-            logchannel = self.guild.get_channel(logging)
-            await logchannel.send(f"{user.mention} left normal queue for " + raidchannel.name, allowed_mentions = discord.AllowedMentions(users=False))
-         await updateEmbed(self.id, interaction.channel)
-        # await interaction.response.defer()
+        guild = self.client.get_guild(settings.queueServer)
+        for roleID in priority:
+            if discord.utils.get(guild.roles, id=roleID) in user.roles:
+                priorityUsers.remove(user)
+        queue.remove(user)
+        print(f"{user.mention} left queue")
+        await logChannel.send(f"{user.mention} left queue", allowed_mentions = discord.AllowedMentions(users=False))
+        await updateEmbeds(self.client)
+        await interaction.response.defer()
+        #await interaction.response.send_message("You have left the queue", ephemeral=True)
 
-async def on_raid(message, queueID, channel, guild):
+async def updateEmbeds(client):
+    embed.remove_field(index=0)
+    s = ""
+    i = 1
+    for dude in queue:
+        if dude in priorityUsers:
+            s += str(i) + ". <:Shiny:1123782221778669629> " +  f"<@{dude.id}>" + "\n"
+        else:
+            s += str(i) + ". " +  f"<@{dude.id}>" + "\n"
+        i+=1
+    embed.add_field(name="Users in Queue", value=s)
+    for id in embedMessages:
+        channel = client.get_channel(id)
+        msg = await channel.fetch_message(embedMessages[id])
+        await msg.edit(embed=embed, view=JoinButton(client))
+        print("updated embed in " + channel.name)
+
+async def onRaid(message, client):
+    priorityPulled = 0
     s = message.content + "\n"
-    
-    print(message.content)
-    for i in range(0, people):
-        if len(queues[queueID][1]) > 0:
-            guy = queues[queueID][1].pop(0)
-            s+= str(i+1)+f". <@{guy.id}>" + "\n"
+    for i in range(0, 3):
+        if priorityPulled < settings.prioritySlots and len(priorityUsers) > 0:
+            priorityPulled+=1
+            guy = priorityUsers.pop(0)
+            queue.remove(guy)
             await guy.send(message.content)
-        elif len(queues[queueID][2]) > 0:
-            guy = queues[queueID][2].pop(0)
             s+= str(i+1)+f". <@{guy.id}>" + "\n"
+            print("Pulled From Priority")
+        elif len(queue) > 0:
+            guy = queue.pop(0)
+            if guy in priorityUsers:
+                priorityUsers.remove(guy)
             await guy.send(message.content)
-    if logging != 0:
-        logchannel = guild.get_channel(logging)
-        await logchannel.send(s, allowed_mentions = discord.AllowedMentions(users=False))
-    await updateEmbed(queueID, channel)
-
-
+            s+= str(i+1)+f". <@{guy.id}>" + "\n"
+            print("Pulled From Normal")
+    logChannel = client.get_channel(settings.loggingChannel)
+    await logChannel.send(s, allowed_mentions = discord.AllowedMentions(users=False))
+    await updateEmbeds(client)
+        
 def run_bot():
-    TOKEN = os.getenv('TOKEN')
-
-    
+    intents = discord.Intents.all()
     client = discord.Client(intents=intents)
     tree = app_commands.CommandTree(client)
-    guild = client.get_guild(int(os.getenv('GUILD')))
-    channel = client.get_channel(int(os.getenv('CHANNEL')))
     
-    @tree.command(name="renamequeue", description="changes queue name")
-    @app_commands.checks.has_permissions(administrator = True)
-    async def renameq(interaction: discord.Interaction, number: str, title: str):
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
-        try:
-            number = int(number)
-            queuechannel = client.get_channel(number)
-            print(queuechannel.name)
-        except:
-            await interaction.response.send_message("invalid channel id")
-            return
-        if number not in queues:
-            await interaction.response.send_message("raid channel doesn't have a queue")
-            return 
-        embeds[number].title = title
-        msg = await channel.fetch_message(queues[number][0])
-        await msg.edit(embed=embeds[number])  
-        await interaction.response.send_message(queuechannel.name + "queue is almost shown as " +title)
-    @tree.command(name="setqueuelog", description="sets the channel for queue bot logging")
-    @app_commands.checks.has_permissions(administrator = True)
-    async def qlog(interaction: discord.Interaction, number: str):
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
-        try:
-            number = int(number)
-            queuechannel = client.get_channel(number)
-            print(queuechannel.name)
-        except:
-            await interaction.response.send_message("invalid channel id")
-            return
-        global logging
-        logging = number
-        await interaction.response.send_message(queuechannel.name + " is now the logging channel")
-    
+
+    @client.event
+    async def on_ready():
+        print("Bot up and running")
+        if startSync == True:
+            synced = await tree.sync()
+            print(f"Synced {len(synced)} commands")
+        guild = client.get_guild(settings.queueServer)
+        for entry in cur.execute("SELECT PrioID FROM Priority"):
+            priority.append(entry[0])
+            role = discord.utils.get(guild.roles, id=entry[0])
+            print("Initiated role " + role.name + " with ID: " +  str(entry[0]) + " in priority queue")
+        for entry in cur.execute("SELECT ChannelID, MessageID FROM Embeds"):
+            embedMessages[entry[0]] = entry[1]
+        await updateEmbeds(client)
+
     @tree.command(name="sync", description="sync commands")
     @app_commands.checks.has_permissions(administrator = True)
     async def sync(interaction: discord.Interaction):
-
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         synced = await tree.sync()
         await interaction.response.send_message(f"Synced {len(synced)} commands")
-    
-    @tree.command(name="ping", description="testing")
-    async def test(interaction: discord.Interaction): 
-        await interaction.response.send_message("pong")
 
-    
-
-    @tree.command(name="listqueues", description="lists all queues")
+    @tree.command(name="createembed", description="creates an embed used to join and leave the queue")
     @app_commands.checks.has_permissions(administrator = True)
-    async def queuelist(interaction: discord.Interaction):
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
+    async def createembed(interaction: discord.Interaction):
+        channel = interaction.channel
+        if channel.id in embedMessages:
+            await interaction.response.send_message(f"Channel already has an embed")
+            return
+        
+        msg = await channel.send(embed=embed, view=JoinButton(client))
+        embedMessages[channel.id] = msg.id
+        cur.execute("INSERT INTO Embeds(ChannelID,MessageID) VALUES("+str(channel.id) + ","+ str(msg.id) + ")")
+        con.commit()
+        await interaction.response.send_message(f"Created embed")
+
+    @tree.command(name="removeembed", description="deletes an embed used to join and leave the queue")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def removeembed(interaction: discord.Interaction):
+        channel = interaction.channel
+        if channel.id not in embedMessages:
+            await interaction.response.send_message(f"Channel doesn't have an embed")
+            return
+        msg = await channel.fetch_message(embedMessages[channel.id])
+        await msg.delete()
+        del embedMessages[channel.id]
+        cur.execute("DELETE FROM Embeds WHERE ChannelID = "+str(channel.id))
+        con.commit()
+        await interaction.response.send_message(f"Removed embed")
+
+    @tree.command(name="viewembeds", description="see where the embeds are located")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def viewembeds(interaction: discord.Interaction):
         s = ""
-        for queue_ID in queues:
-            raidchannel = client.get_channel(queue_ID)
-            msg = await channel.fetch_message(queues[queue_ID][0])
-            s+=raidchannel.name+":\n" + msg.jump_url + "\n\n"
+        for id in embedMessages:
+            channel = client.get_channel(id)
+            msg = await channel.fetch_message(embedMessages[id])
+            s+=channel.name+":\n" + msg.jump_url + "\n\n"
         await interaction.response.send_message(s)
 
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioadd(interaction: discord.Interaction, number: str):
-        guild = client.get_guild(int(os.getenv('GUILD')))
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
+        if queueEnabled == True:
+            await interaction.response.send_message("Queue must be disabled in order to change priority roles")
+            return
+        guild = client.get_guild(settings.queueServer)
         try:
             number = int(number)
-            role = discord.utils.get(channel.guild.roles, id=number)
-            print(role.name)
+            role = discord.utils.get(guild.roles, id=number)
+            print("Role:" + role.name)
         except:
             await interaction.response.send_message("invalid role id")
             return
         if number in priority:
             await interaction.response.send_message("role is already a priority role")
             return
-        priority.append(number)
         cur.execute("INSERT INTO Priority(PrioID) VALUES("+str(number)+ ")")
         con.commit()
+        priority.append(number)
         await interaction.response.send_message(role.name + " added to priority roles")
 
     @tree.command(name="removepriority", description="removes a priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioremove(interaction: discord.Interaction, number: str):
-        guild = client.get_guild(int(os.getenv('GUILD')))
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
+        if queueEnabled == True:
+            await interaction.response.send_message("Queue must be disabled in order to change priority roles")
+            return
+        guild = client.get_guild(settings.queueServer)
         try:
             number = int(number)
-            role = discord.utils.get(channel.guild.roles, id=number)
-            print(role.name)
+            role = discord.utils.get(guild.roles, id=number)
+            print("Role:" + role.name)
         except:
             await interaction.response.send_message("invalid role id")
             return
         if number not in priority:
             await interaction.response.send_message("role is not a priority role")
             return
-        priority.remove(number)
         cur.execute("DELETE FROM Priority WHERE PrioID = "+str(number))
         con.commit()
+        priority.remove(number)
         await interaction.response.send_message(role.name + " removed from priority roles")
 
-    @tree.command(name="addqueue", description="adds a queue")
+    @tree.command(name="togglequeue", description="toggles the queue on or off")
     @app_commands.checks.has_permissions(administrator = True)
-    async def queueadd(interaction: discord.Interaction, number: str):
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
-        guild = client.get_guild(int(os.getenv('GUILD')))
-        try:
-            queue_ID = int(number)
-            
-            raidchannel = client.get_channel(queue_ID)
-            print(raidchannel.name)
-        except:
-            await interaction.response.send_message("invalid raid channel id")
+    async def togglequeue(interaction: discord.Interaction, toggle: toggle):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        if queue_ID in queues:
-            await interaction.response.send_message("raid channel already has a queue")
-            return
-        embeds[queue_ID] = discord.Embed(title="Queue " + raidchannel.name)
-        embeds[queue_ID].add_field(name="Priority Users in Queue", value="1.")
-        embeds[queue_ID].add_field(name="Normal Users in Queue", value="1.")
-        msg = await channel.send(embed=embeds[queue_ID], view=JoinButton(queue_ID, guild))
-        msg_id = msg.id
-        print(msg_id)    
-        queues[queue_ID] = []
-        queues[queue_ID].append(msg.id)
-        queues[queue_ID].append([])
-        queues[queue_ID].append([])
-        queues[queue_ID].append(True)
-        cur.execute("INSERT INTO Queues(QID,MID) VALUES("+str(queue_ID) + ","+ str(msg_id) + ")")
-        con.commit()
-        await interaction.response.send_message(raidchannel.name + " queue has been created")
+        global queueEnabled, queue, priorityUsers
+        if toggle.value == 1:
+            queueEnabled = True
+            await interaction.response.send_message("enabled queue")
+        elif toggle.value == 0:
+            queue = []
+            priorityUsers = []
+            queueEnabled = False
+            await updateEmbeds(client)
+            await interaction.response.send_message("disabled queue")
 
-    @tree.command(name="removequeue", description="removes a queue")
-    @app_commands.checks.has_permissions(administrator = True)
-    async def queueremove(interaction: discord.Interaction, number: str):
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
-        guild = client.get_guild(int(os.getenv('GUILD')))
-        try:
-            queue_ID = int(number)
-            raidchannel = client.get_channel(queue_ID)
-            print(raidchannel.name)
-        except:
-            await interaction.response.send_message("invalid raid channel id")
-            return
-        if queue_ID not in queues:
-            await interaction.response.send_message("raid channel doesn't have a queue")
-            return
-        embeds.pop(queue_ID)
-        msg = await channel.fetch_message(queues[queue_ID][0])
-        await msg.delete()
-        queues.pop(queue_ID)
-        cur.execute("DELETE FROM Queues WHERE QID = "+str(queue_ID))
-        con.commit()
-        await interaction.response.send_message(raidchannel.name + " queue has been removed")
     @tree.command(name="setqueuethumbnail", description="sets the queue thumbnail image using a url")
     @app_commands.checks.has_permissions(administrator = True)
-    async def setthumbnail(interaction: discord.Interaction, number: str, thumbnail: str):
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
-        guild = client.get_guild(int(os.getenv('GUILD')))
-        try:
-            queue_ID = int(number)
-            raidchannel = client.get_channel(queue_ID)
-            print(raidchannel.name)
-        except:
-            await interaction.response.send_message("invalid channel id")
+    async def setthumbnail(interaction: discord.Interaction, thumbnail: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        if queue_ID not in queues:
-            await interaction.response.send_message("channel doesn't have a queue")
-            return
-        embeds[queue_ID].set_thumbnail(url=thumbnail)
-        msg = await channel.fetch_message(queues[queue_ID][0])
-        await msg.edit(embed=embeds[queue_ID], view=JoinButton(queue_ID, guild))
-        await interaction.response.send_message("Thumbnail has been changed for queue " + number)
-    @tree.command(name="enablequeue", description="enable a disabled queue")
+        embed.set_thumbnail(url=thumbnail)
+        await updateEmbeds(client)
+        await interaction.response.send_message("set thumbnail to " + thumbnail)
+    @tree.command(name="setqueuechannel", description="changes queue channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
-    async def enable(interaction: discord.Interaction, number: str):
+    async def queuechannel(interaction: discord.Interaction, number: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         try:
-            queue_ID = int(number)
-            raidchannel = client.get_channel(queue_ID)
-            print(raidchannel.name)
+            number = int(number)
+            raidchannel = client.get_channel(number)
+            print("New raid channel: " + raidchannel.name)
         except:
             await interaction.response.send_message("invalid raid channel id")
             return
-        if queue_ID not in queues:
-            await interaction.response.send_message("raid channel doesn't have a queue")
-            return
-        if queues[queue_ID][3] == True:
-            await interaction.response.send_message("queue is already active")
-            return
-        queues[queue_ID][3] = True
-        await interaction.response.send_message("Queue enabled")
-    @tree.command(name="disablequeue", description="disable a queue")
+        settings.queueChannel = number
+        set_key(".env", 'QUEUE_CHANNEL', str(number))
+        #os.environ['QUEUE_CHANNEL'] = str(number)
+        await interaction.response.send_message("Changed raid channel to " + raidchannel.name)
+
+    @tree.command(name="setloggingchannel", description="changes logging channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
-    async def disable(interaction: discord.Interaction, number: str):
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
+    async def loggingchannel(interaction: discord.Interaction, number: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
         try:
-            queue_ID = int(number)
-            raidchannel = client.get_channel(queue_ID)
-            print(raidchannel.name)
+            number = int(number)
+            loggingchannel = client.get_channel(number)
+            print("New logging channel: " + loggingchannel.name)
         except:
-            await interaction.response.send_message("invalid raid channel id")
+            await interaction.response.send_message("invalid logging channel id")
             return
-        if queue_ID not in queues:
-            await interaction.response.send_message("raid channel doesn't have a queue")
+        settings.loggingChannel = number
+        set_key(".env", 'LOGGING_CHANNEL', str(number))
+        await interaction.response.send_message("Changed logging channel to " + loggingchannel.name)
+
+    @tree.command(name="setqueuename", description="changes queue name to inputted one")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def queuename(interaction: discord.Interaction, name: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        if queues[queue_ID][3] == False:
-            await interaction.response.send_message("queue is already disabled")
+        embed.title = name
+        set_key(".env", 'QUEUE_NAME', name)
+        #os.environ['QUEUE_NAME'] = name
+        await interaction.response.send_message("Changed queue title to " + name)
+        await updateEmbeds(client)
+
+    @tree.command(name="setraidtrigger", description="changes the keyword used to find raid codes")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def raidtrigger(interaction: discord.Interaction, key: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        queues[queue_ID][3] = False
-        queues[queue_ID][1] = []
-        queues[queue_ID][2] = []
-        await updateEmbed(queue_ID, channel)
-        await interaction.response.send_message("Queue disabled")
+        settings.raidString = key
+        set_key(".env", 'RAID_CODE_IDENTIFIER', key)
+        await interaction.response.send_message("Changed raid trigger to " + key)
+
+    @tree.command(name="setprioritypulled", description="changes how many priority members are prioritized each raid")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def prioritypulled(interaction: discord.Interaction, number: Literal[0, 1, 2, 3]):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
+        settings.prioritySlots = number  
+        set_key(".env", 'PRIORITY_NUMBER', str(number))
+        print("New priority number: " + str(number))
+        await interaction.response.send_message("Changed number to prioritize to " + str(number))
+
     @tree.error
     async def on_app_command_error(interaction, error):
         if isinstance(error, app_commands.MissingPermissions):
             await interaction.response.send_message(error)
-    @tree.command(name="sillytoggle", description="Toggles the sillies, obviously")
-    @app_commands.checks.has_permissions(administrator = True)
-    async def silly(interaction: discord.Interaction):
-        global sillyMode
-        if sillyMode == True:
-            sillyMode = False
-            await interaction.response.send_message("No more sillies :(", ephemeral=True)
-        else:
-            sillyMode = True
-            await interaction.response.send_message("Silly time", ephemeral=True)
-
-    @client.event
-    async def on_ready():
-        if startSync == True:
-            synced = await tree.sync()
-            print(f"Synced {len(synced)} commands")
-        guild = client.get_guild(int(os.getenv('GUILD')))
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
-        print(guild.name)
-        #synced = await tree.sync()
-        #print(f"Synced {len(synced)} commands")
-        print("up and running!")
-        for entry in cur.execute("SELECT PrioID FROM Priority"):
-            priority.append(entry[0])
-            role = discord.utils.get(channel.guild.roles, id=entry[0])
-            print("Initiated role " + role.name + " with ID: " +  str(entry[0]) + " in priority queue")
-        for entry in cur.execute("SELECT QID, MID FROM Queues"):
-            queues[entry[0]] = []
-            raidchannel = client.get_channel(entry[0])
-            embeds[entry[0]] = discord.Embed(title="Queue " + raidchannel.name)
-            embeds[entry[0]].add_field(name="Priority Users in Queue", value="1.")
-            embeds[entry[0]].add_field(name="Normal Users in Queue", value="1.")
-            queues[entry[0]].append(entry[1])
-            queues[entry[0]].append([])
-            queues[entry[0]].append([])
-            queues[entry[0]].append(True)
-            msg = await channel.fetch_message(entry[1])
-            await msg.edit(embed=embeds[entry[0]], view=JoinButton(entry[0], guild))
-            print("Initiated Queue " + raidchannel.name + " with ID: " + str(entry[0]))
 
     @client.event
     async def on_message(message):
-        guild = client.get_guild(int(os.getenv('GUILD')))
-        channel = client.get_channel(int(os.getenv('CHANNEL')))
-        notify = client.get_channel(int(os.getenv('NOTIFICATION')))
+        if client.get_channel(settings.queueChannel) == message.channel:
+            #print(message.content)
+            if settings.raidString in message.content and message.author.id != client.user.id:
+                await onRaid(message, client)
+                print("Found message " + message.content)
 
-        for queueID in queues:
-            if client.get_channel(queueID) == message.channel:
-                if "Raid Code" in message.content:
-                    
-                    await on_raid(message, queueID, channel, guild)
-                    return
-                elif "Preparing parameter for" in message.content:
-                    await notify.send(message.content)
-                    return
-
-
-    client.run(TOKEN)
-run_bot()
+    client.run(settings.TOKEN)
+if __name__ == "__main__":
+    run_bot()
