@@ -94,7 +94,7 @@ async def updateEmbeds(client):
             print("updated embed in " + channel.name)
         except:
             del embedMessages[id]
-            cur.execute("DELETE FROM Embeds WHERE ChannelID = "+str(channel.id))
+            cur.execute("DELETE FROM Embeds WHERE ChannelID = "+str(id))
             con.commit()
             print("WARNING: Removed embed with ID " + str(id))
         
