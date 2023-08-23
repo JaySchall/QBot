@@ -152,7 +152,7 @@ def run_bot():
         await interaction.response.send_message(f"Synced {len(synced)} commands")
 
     @tree.command(name="createembed", description="creates an embed used to join and leave the queue")
-    @app_commands.checks.has_permissions(administrator = True)
+    @app_commands.checks.has_permissions(manage_messages = True)
     async def createembed(interaction: discord.Interaction):
         channel = interaction.channel
         if channel.id in embedMessages:
@@ -166,7 +166,7 @@ def run_bot():
         await interaction.response.send_message(f"Created embed")
 
     @tree.command(name="removeembed", description="deletes an embed used to join and leave the queue")
-    @app_commands.checks.has_permissions(administrator = True)
+    @app_commands.checks.has_permissions(manage_messages = True)
     async def removeembed(interaction: discord.Interaction):
         channel = interaction.channel
         if channel.id not in embedMessages:
@@ -180,7 +180,7 @@ def run_bot():
         await interaction.response.send_message(f"Removed embed")
 
     @tree.command(name="viewembeds", description="see where the embeds are located")
-    @app_commands.checks.has_permissions(administrator = True)
+    @app_commands.checks.has_permissions(manage_messages = True)
     async def viewembeds(interaction: discord.Interaction):
         s = ""
         for id in embedMessages:
