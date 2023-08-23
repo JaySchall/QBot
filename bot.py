@@ -86,11 +86,18 @@ async def updateEmbeds(client):
             s += str(i) + ". " +  f"<@{dude.id}>" + "\n"
         i+=1
     embed.add_field(name="Users in Queue", value=s)
-    for id in embedMessages:
+    for id in embedMessages.copy():
         channel = client.get_channel(id)
-        msg = await channel.fetch_message(embedMessages[id])
-        await msg.edit(embed=embed, view=JoinButton(client))
-        print("updated embed in " + channel.name)
+        try:
+            msg = await channel.fetch_message(embedMessages[id])
+            await msg.edit(embed=embed, view=JoinButton(client))
+            print("updated embed in " + channel.name)
+        except:
+            del embedMessages[id]
+            cur.execute("DELETE FROM Embeds WHERE ChannelID = "+str(channel.id))
+            con.commit()
+            print("WARNING: Removed embed with ID " + str(id))
+        
 
 async def onRaid(message, client):
     priorityPulled = 0
@@ -179,7 +186,7 @@ def run_bot():
         for id in embedMessages:
             channel = client.get_channel(id)
             msg = await channel.fetch_message(embedMessages[id])
-            s+=channel.name+":\n" + msg.jump_url + "\n\n"
+            s+=channel.guild.name+ ":\n" + channel.name+ ":\n" + msg.jump_url + "\n\n"
         await interaction.response.send_message(s)
 
     @tree.command(name="addpriority", description="adds a new priority role")
