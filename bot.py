@@ -51,8 +51,9 @@ class JoinButton(discord.ui.View):
         queue.append(user)
         print(f"{user.mention} joined queue")
         await logChannel.send(f"{user.mention} joined queue", allowed_mentions = discord.AllowedMentions(users=False))
-        await updateEmbeds(self.client)
         await interaction.response.defer()
+        await updateEmbeds(self.client)
+        
 
         #await interaction.response.send_message("You have joined the queue", ephemeral=True)
          
@@ -71,8 +72,8 @@ class JoinButton(discord.ui.View):
         queue.remove(user)
         print(f"{user.mention} left queue")
         await logChannel.send(f"{user.mention} left queue", allowed_mentions = discord.AllowedMentions(users=False))
-        await updateEmbeds(self.client)
         await interaction.response.defer()
+        await updateEmbeds(self.client)
         #await interaction.response.send_message("You have left the queue", ephemeral=True)
 
 async def updateEmbeds(client):
@@ -183,11 +184,12 @@ def run_bot():
     @app_commands.checks.has_permissions(manage_messages = True)
     async def viewembeds(interaction: discord.Interaction):
         s = ""
+        await interaction.response.defer()
         for id in embedMessages:
             channel = client.get_channel(id)
             msg = await channel.fetch_message(embedMessages[id])
             s+=channel.guild.name+ ":\n" + channel.name+ ":\n" + msg.jump_url + "\n\n"
-        await interaction.response.send_message(s)
+        await interaction.followup.send(s)
 
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
