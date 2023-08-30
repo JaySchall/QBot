@@ -182,7 +182,7 @@ def run_bot():
 
     @tree.command(name="viewservers", description="see which servers have the bot")
     @app_commands.checks.has_permissions(manage_messages = True)
-    async def viewembeds(interaction: discord.Interaction):
+    async def viewservers(interaction: discord.Interaction):
         s = ""
         await interaction.response.defer()
         for guild in client.guilds:
@@ -193,10 +193,12 @@ def run_bot():
     @app_commands.checks.has_permissions(manage_messages = True)
     async def viewembeds(interaction: discord.Interaction):
         s = ""
+        print("Starting to list embeds:")
         await interaction.response.defer()
         for id in embedMessages:
             channel = client.get_channel(id)
             msg = await channel.fetch_message(embedMessages[id])
+            print(channel.guild.name+ ":\n" + channel.name+ ":\n" + msg.jump_url)
             s+=channel.guild.name+ ":\n" + channel.name+ ":\n" + msg.jump_url + "\n\n"
         await interaction.followup.send(s)
 
