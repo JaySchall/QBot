@@ -193,14 +193,20 @@ def run_bot():
     @app_commands.checks.has_permissions(manage_messages = True)
     async def viewembeds(interaction: discord.Interaction):
         s = ""
-        print("Starting to list embeds:")
-        await interaction.response.defer()
+        i = 0
+        await interaction.response.send_message("Sending embeds")
         for id in embedMessages:
+            if i > 9:
+                await interaction.channel.send(s)
+                i = 0
+                s = ""
             channel = client.get_channel(id)
             msg = await channel.fetch_message(embedMessages[id])
-            print(channel.guild.name+ ": " + channel.name)
-            s+=channel.guild.name+ ":\n" + channel.name+ ":\n" + msg.jump_url + "\n\n"
-        await interaction.followup.send(s)
+            print(channel.guild.name+ ": " + channel.name + ": " + msg.jump_url)
+            s+=channel.guild.name+ ": " + channel.name+ ": " + msg.jump_url + "\n"
+            i+=1
+        if i > 0:
+            await interaction.channel.send(s)
 
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
