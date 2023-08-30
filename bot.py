@@ -198,7 +198,7 @@ def run_bot():
         for id in embedMessages:
             channel = client.get_channel(id)
             msg = await channel.fetch_message(embedMessages[id])
-            print(channel.guild.name+ ":\n" + channel.name+ ":\n" + msg.jump_url)
+            print(channel.guild.name+ ": " + channel.name)
             s+=channel.guild.name+ ":\n" + channel.name+ ":\n" + msg.jump_url + "\n\n"
         await interaction.followup.send(s)
 
