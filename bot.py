@@ -180,6 +180,15 @@ def run_bot():
         con.commit()
         await interaction.response.send_message(f"Removed embed")
 
+    @tree.command(name="viewservers", description="see which servers have the bot")
+    @app_commands.checks.has_permissions(manage_messages = True)
+    async def viewembeds(interaction: discord.Interaction):
+        s = ""
+        await interaction.response.defer()
+        for guild in client.guilds:
+            s += guild.name + " joined at:" + guild.me.joined_at.strftime("%b %d, %Y, %X") + "\n"
+        await interaction.followup.send(s)
+    
     @tree.command(name="viewembeds", description="see where the embeds are located")
     @app_commands.checks.has_permissions(manage_messages = True)
     async def viewembeds(interaction: discord.Interaction):
@@ -255,8 +264,9 @@ def run_bot():
             queue = []
             priorityUsers = []
             queueEnabled = False
+            await interaction.response.defer()
             await updateEmbeds(client)
-            await interaction.response.send_message("disabled queue")
+            await interaction.followup.send("disabled queue")
 
     @tree.command(name="setqueuethumbnail", description="sets the queue thumbnail image using a url")
     @app_commands.checks.has_permissions(administrator = True)
