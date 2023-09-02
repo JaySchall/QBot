@@ -203,7 +203,7 @@ def run_bot():
         s = ""
         await interaction.response.defer()
         for guild in client.guilds:
-            s += guild.name + " joined at:" + guild.me.joined_at.strftime("%b %d, %Y, %X") + "\n"
+            s += guild.name + " ID: " + str(guild.id) + " joined at:" + guild.me.joined_at.strftime("%b %d, %Y, %X") + "\n"
         await interaction.followup.send(s)
     
     @tree.command(name="viewembeds", description="see where the embeds are located")
