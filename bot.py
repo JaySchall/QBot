@@ -1,3 +1,4 @@
+import datetime
 from typing import Literal
 import sys
 import enum
@@ -5,6 +6,7 @@ from dotenv import set_key
 import discord
 import sqlite3
 import os
+import time
 from discord import app_commands
 from dotenv import load_dotenv
 import settings
@@ -19,6 +21,7 @@ queue = []
 priorityUsers = []
 queueEnabled = True
 startSync = False
+startTime = time.time()
 
 if len(sys.argv) > 1:
     if sys.argv[1] == "sync":
@@ -196,6 +199,17 @@ def run_bot():
         await guild.leave()
         await interaction.response.send_message("left guild " + guild.name)
         await updateEmbeds(client)
+
+    @tree.command(name="viewbotinfo", description="see information about the bot")
+    @app_commands.checks.has_permissions(manage_messages = True)
+    async def botinfo(interaction: discord.Interaction):
+        duration = int(time.time() - startTime)
+        infoembed = discord.Embed(title= client.user.name)
+        infoembed.set_thumbnail(url=client.user.avatar.url)
+        infoembed.add_field(name="Current Runtime: ", value=datetime.timedelta(seconds=duration))
+        infoembed.add_field(name="Raid Trigger: ", value=settings.raidString)
+        infoembed.add_field(name="Number of Embeds: ", value=str(len(embedMessages.keys())) + " embeds")
+        await interaction.response.send_message(embed=infoembed)
 
     @tree.command(name="viewservers", description="see which servers have the bot")
     @app_commands.checks.has_permissions(manage_messages = True)
