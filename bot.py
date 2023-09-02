@@ -180,6 +180,23 @@ def run_bot():
         con.commit()
         await interaction.response.send_message(f"Removed embed")
 
+    @tree.command(name="removeserver", description="leaves a bad server")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def removeserver(interaction: discord.Interaction, number: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
+        try:
+            number = int(number)
+            guild = client.get_guild(number)
+            print("Removing guild: " + guild.name)
+        except:
+            await interaction.response.send_message("invalid guild id")
+            return
+        await guild.leave()
+        await interaction.response.send_message("left guild " + guild.name)
+        await updateEmbeds(client)
+
     @tree.command(name="viewservers", description="see which servers have the bot")
     @app_commands.checks.has_permissions(manage_messages = True)
     async def viewservers(interaction: discord.Interaction):
