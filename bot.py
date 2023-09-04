@@ -7,6 +7,7 @@ import discord
 import sqlite3
 import os
 import time
+import urllib.request
 from discord import app_commands
 from dotenv import load_dotenv
 import settings
@@ -145,6 +146,28 @@ def run_bot():
         for entry in cur.execute("SELECT ChannelID, MessageID FROM Embeds"):
             embedMessages[entry[0]] = entry[1]
         await updateEmbeds(client)
+
+    @tree.command(name="restart", description="restarts the bot")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def restart(interaction: discord.Interaction):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
+        await interaction.response.send_message("Restarting, this may take a minute")
+        script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+        botpy_url = "https://raw.githubusercontent.com/JaySchall/QBot/main/bot.py"
+        settings_url = "https://raw.githubusercontent.com/JaySchall/QBot/main/settings.py"
+        botpy_name = file_name = os.path.join(script_dir, "bot.py")
+        settingspy_name = os.path.join(script_dir, "settings.py")
+        try:
+            urllib.request.urlretrieve(botpy_url, botpy_name)
+            print(f"File downloaded to: {botpy_name}")
+            urllib.request.urlretrieve(settings_url, settingspy_name)
+            print(f"File downloaded to: {settingspy_name}")
+        except Exception as e:
+            print(f"Failed to download the file: {e}")
+            return
+        os.execl(sys.executable, sys.executable, *sys.argv)
 
     @tree.command(name="sync", description="sync commands")
     @app_commands.checks.has_permissions(administrator = True)
