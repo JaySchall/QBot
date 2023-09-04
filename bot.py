@@ -301,6 +301,9 @@ def run_bot():
         if interaction.guild.id != settings.queueServer:
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
+        if not thumbnail.endswith((".jpg", ".png", ".webp", ".gif")):
+            await interaction.response.send_message("The url does not appear to be a valid image")
+            return
         embed.set_thumbnail(url=thumbnail)
         await updateEmbeds(client)
         await interaction.response.send_message("set thumbnail to " + thumbnail)
