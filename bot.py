@@ -241,7 +241,7 @@ def run_bot():
 
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
-    async def prioadd(interaction: discord.Interaction, number: str):
+    async def prioadd(interaction: discord.Interaction, role: discord.Role):
         if interaction.guild.id != settings.queueServer:
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
@@ -249,13 +249,7 @@ def run_bot():
             await interaction.response.send_message("Queue must be disabled in order to change priority roles")
             return
         guild = client.get_guild(settings.queueServer)
-        try:
-            number = int(number)
-            role = discord.utils.get(guild.roles, id=number)
-            print("Role:" + role.name)
-        except:
-            await interaction.response.send_message("invalid role id")
-            return
+        number = role.id
         if number in priority:
             await interaction.response.send_message("role is already a priority role")
             return
@@ -266,7 +260,7 @@ def run_bot():
 
     @tree.command(name="removepriority", description="removes a priority role")
     @app_commands.checks.has_permissions(administrator = True)
-    async def prioremove(interaction: discord.Interaction, number: str):
+    async def prioremove(interaction: discord.Interaction, role: discord.Role):
         if interaction.guild.id != settings.queueServer:
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
@@ -274,13 +268,7 @@ def run_bot():
             await interaction.response.send_message("Queue must be disabled in order to change priority roles")
             return
         guild = client.get_guild(settings.queueServer)
-        try:
-            number = int(number)
-            role = discord.utils.get(guild.roles, id=number)
-            print("Role:" + role.name)
-        except:
-            await interaction.response.send_message("invalid role id")
-            return
+        number = role.id
         if number not in priority:
             await interaction.response.send_message("role is not a priority role")
             return
@@ -318,17 +306,12 @@ def run_bot():
         await interaction.response.send_message("set thumbnail to " + thumbnail)
     @tree.command(name="setqueuechannel", description="changes queue channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
-    async def queuechannel(interaction: discord.Interaction, number: str):
+    async def queuechannel(interaction: discord.Interaction, raidchannel: discord.TextChannel):
         if interaction.guild.id != settings.queueServer:
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        try:
-            number = int(number)
-            raidchannel = client.get_channel(number)
-            print("New raid channel: " + raidchannel.name)
-        except:
-            await interaction.response.send_message("invalid raid channel id")
-            return
+        number = raidchannel.id
+        print("New raid channel: " + raidchannel.name)
         settings.queueChannel = number
         set_key(".env", 'QUEUE_CHANNEL', str(number))
         #os.environ['QUEUE_CHANNEL'] = str(number)
@@ -336,17 +319,13 @@ def run_bot():
 
     @tree.command(name="setloggingchannel", description="changes logging channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
-    async def loggingchannel(interaction: discord.Interaction, number: str):
+    async def loggingchannel(interaction: discord.Interaction, loggingchannel: discord.TextChannel):
         if interaction.guild.id != settings.queueServer:
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        try:
-            number = int(number)
-            loggingchannel = client.get_channel(number)
-            print("New logging channel: " + loggingchannel.name)
-        except:
-            await interaction.response.send_message("invalid logging channel id")
-            return
+        number = loggingchannel.id
+        print("New logging channel: " + loggingchannel.name)
+        
         settings.loggingChannel = number
         set_key(".env", 'LOGGING_CHANNEL', str(number))
         await interaction.response.send_message("Changed logging channel to " + loggingchannel.name)
