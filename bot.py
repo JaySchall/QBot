@@ -234,6 +234,18 @@ def run_bot():
         infoembed.add_field(name="Number of Embeds: ", value=str(len(embedMessages.keys())) + " embeds")
         await interaction.response.send_message(embed=infoembed)
 
+    @tree.command(name="viewstrategy", description="view the raid strategy")
+    async def viewstrat(interaction: discord.Interaction):
+        if not os.path.exists("strategy.txt"):
+            await interaction.response.send_message("no current strategy")
+        file = open("strategy.txt","r")
+        s = ""
+        for line in file:
+            s+= line
+        print(s)
+        await interaction.response.send_message(s)
+
+
     @tree.command(name="viewservers", description="see which servers have the bot")
     @app_commands.checks.has_permissions(manage_messages = True)
     async def viewservers(interaction: discord.Interaction):
@@ -317,6 +329,24 @@ def run_bot():
             await interaction.response.defer()
             await updateEmbeds(client)
             await interaction.followup.send("disabled queue")
+
+    @tree.command(name="setstrategy", description="toggles the queue on or off")
+    @app_commands.checks.has_permissions(administrator = True)
+    async def setstrat(interaction: discord.Interaction, messageid: str):
+        if interaction.guild.id != settings.queueServer:
+            await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
+            return
+        try:
+            messageid = int(messageid)
+            print(interaction.user.name)
+            strat = await interaction.channel.fetch_message(messageid)
+            print("yo")
+            print(strat.content)
+        except:
+            await interaction.response.send_message("message not found")
+        file = open("strategy.txt","w")
+        file.write(strat.content)
+        await interaction.response.send_message(strat.content)
 
     @tree.command(name="setqueuethumbnail", description="sets the queue thumbnail image using a url")
     @app_commands.checks.has_permissions(administrator = True)
