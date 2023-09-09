@@ -180,6 +180,7 @@ def run_bot():
 
     @tree.command(name="createembed", description="creates an embed used to join and leave the queue")
     @app_commands.checks.has_permissions(manage_messages = True)
+    @app_commands.checks.bot_has_permissions(external_emojis = True, send_messages = True, view_channel = True)
     async def createembed(interaction: discord.Interaction):
         channel = interaction.channel
         if channel.id in embedMessages:
@@ -257,6 +258,7 @@ def run_bot():
     
     @tree.command(name="viewembeds", description="see where the embeds are located")
     @app_commands.checks.has_permissions(manage_messages = True)
+    @app_commands.checks.bot_has_permissions(send_messages = True, view_channel = True)
     async def viewembeds(interaction: discord.Interaction):
         s = ""
         i = 0
@@ -423,6 +425,9 @@ def run_bot():
     async def on_app_command_error(interaction, error):
         if isinstance(error, app_commands.MissingPermissions):
             await interaction.response.send_message(error)
+        elif isinstance(error, app_commands.BotMissingPermissions):
+            await interaction.response.send_message(error)
+            
 
     @client.event
     async def on_message(message):
