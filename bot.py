@@ -255,11 +255,12 @@ def run_bot():
         await interaction.response.send_message("Sending server list")
         
         for guild in client.guilds:
-            if i > 1:
+            if i > 9:
                 await interaction.channel.send(s)
                 i = 0
                 s = ""
             s += guild.name + " ID: " + str(guild.id) + " joined at:" + guild.me.joined_at.strftime("%b %d, %Y, %X") + "\n"
+            i+=1
         if i > 0:
             await interaction.channel.send(s)
     
