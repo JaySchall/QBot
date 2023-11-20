@@ -251,10 +251,17 @@ def run_bot():
     @app_commands.checks.has_permissions(manage_messages = True)
     async def viewservers(interaction: discord.Interaction):
         s = ""
-        await interaction.response.defer()
+        i = 0
+        await interaction.response.send_message("Sending server list")
+        
         for guild in client.guilds:
+            if i > 9:
+                await interaction.channel.send(s)
+                i = 0
+                s = ""
             s += guild.name + " ID: " + str(guild.id) + " joined at:" + guild.me.joined_at.strftime("%b %d, %Y, %X") + "\n"
-        await interaction.followup.send(s)
+        if i > 0:
+            await interaction.channel.send(s)
     
     @tree.command(name="viewembeds", description="see where the embeds are located")
     @app_commands.checks.has_permissions(manage_messages = True)
@@ -434,8 +441,11 @@ def run_bot():
         if client.get_channel(settings.queueChannel) == message.channel:
             #print(message.content)
             if settings.raidString in message.content and message.author.id != client.user.id:
-                await onRaid(message, client)
-                print("Found message " + message.content)
+                if "iJ0LTU" in message.content:
+                    print("iJ0LTU found in " + message.content)
+                else:
+                    await onRaid(message, client)
+                    print("Found message " + message.content)
 
     client.run(settings.TOKEN)
 if __name__ == "__main__":
