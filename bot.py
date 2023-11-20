@@ -255,7 +255,7 @@ def run_bot():
         await interaction.response.send_message("Sending server list")
         
         for guild in client.guilds:
-            if i > 9:
+            if i > 1:
                 await interaction.channel.send(s)
                 i = 0
                 s = ""
