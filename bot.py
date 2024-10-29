@@ -137,6 +137,7 @@ def run_bot():
     @client.event
     async def on_ready():
         print("Bot up and running")
+        settings.reload()
         if startSync == True:
             synced = await tree.sync()
             print(f"Synced {len(synced)} commands")
