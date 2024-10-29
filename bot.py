@@ -81,6 +81,7 @@ class JoinButton(discord.ui.View):
         #await interaction.response.send_message("You have left the queue", ephemeral=True)
 
 async def updateEmbeds(client):
+    embed.title = settings.queueName
     embed.remove_field(index=0)
     s = ""
     i = 1
@@ -106,20 +107,20 @@ async def updateEmbeds(client):
 
 async def onRaid(message, client):
     priorityPulled = 0
-    s = message.content + "\n"
+    s = message + "\n"
     for i in range(0, 3):
         if priorityPulled < settings.prioritySlots and len(priorityUsers) > 0:
             priorityPulled+=1
             guy = priorityUsers.pop(0)
             queue.remove(guy)
-            await guy.send(message.content)
+            await guy.send(message)
             s+= str(i+1)+f". <@{guy.id}>" + "\n"
             print("Pulled From Priority")
         elif len(queue) > 0:
             guy = queue.pop(0)
             if guy in priorityUsers:
                 priorityUsers.remove(guy)
-            await guy.send(message.content)
+            await guy.send(message)
             s+= str(i+1)+f". <@{guy.id}>" + "\n"
             print("Pulled From Normal")
     logChannel = client.get_channel(settings.loggingChannel)
@@ -227,12 +228,17 @@ def run_bot():
     @tree.command(name="viewbotinfo", description="see information about the bot")
     @app_commands.checks.has_permissions(manage_messages = True)
     async def botinfo(interaction: discord.Interaction):
+        guild = client.get_guild(settings.queueServer)
+
         duration = int(time.time() - startTime)
+        priorityRoles = [(discord.utils.get(guild.roles, id=roleID)) for roleID in priority]
+
         infoembed = discord.Embed(title= client.user.name)
         infoembed.set_thumbnail(url=client.user.avatar.url)
         infoembed.add_field(name="Current Runtime: ", value=datetime.timedelta(seconds=duration))
         infoembed.add_field(name="Raid Trigger: ", value=settings.raidString)
         infoembed.add_field(name="Number of Embeds: ", value=str(len(embedMessages.keys())) + " embeds")
+        infoembed.add_field(name="Priority Roles: ", value="".join(role.mention for role in priorityRoles))
         await interaction.response.send_message(embed=infoembed)
 
     @tree.command(name="viewstrategy", description="view the raid strategy")
@@ -445,7 +451,9 @@ def run_bot():
                 if "iJ0LTU" in message.content:
                     print("iJ0LTU found in " + message.content)
                 else:
-                    await onRaid(message, client)
+                    index = message.content.find(settings.raidString)
+                    message_text = message.content[index:]
+                    await onRaid(message_text, client)
                     print("Found message " + message.content)
 
     client.run(settings.TOKEN)
