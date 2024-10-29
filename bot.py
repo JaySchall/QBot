@@ -409,6 +409,7 @@ def run_bot():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         embed.title = name
+        settings.queueName = name
         set_key(".env", 'QUEUE_NAME', name)
         #os.environ['QUEUE_NAME'] = name
         await interaction.response.send_message("Changed queue title to " + name)
