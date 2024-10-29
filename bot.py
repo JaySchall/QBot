@@ -15,7 +15,7 @@ import settings
 
 con = sqlite3.connect("Queue.sqlite3")
 cur = con.cursor()
-print(settings.queueName)
+
 embed = discord.Embed(title=settings.queueName)
 embed.add_field(name="Users in Queue", value="1.")
 embedMessages = {}
@@ -139,6 +139,7 @@ def run_bot():
     async def on_ready():
         print("Bot up and running")
         importlib.reload(settings)
+        print(settings.queueName)
         if startSync == True:
             synced = await tree.sync()
             print(f"Synced {len(synced)} commands")
