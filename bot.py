@@ -16,7 +16,7 @@ import settings
 con = sqlite3.connect("Queue.sqlite3")
 cur = con.cursor()
 
-embed = discord.Embed(title=settings.queueName)
+embed = discord.Embed(title=settings.queueName())
 embed.add_field(name="Users in Queue", value="1.")
 embedMessages = {}
 priority = []
@@ -41,7 +41,7 @@ class JoinButton(discord.ui.View):
          self.client = client
      @discord.ui.button(label='Join Queue', style=discord.ButtonStyle.green)
      async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
-        logChannel = self.client.get_channel(settings.loggingChannel)
+        logChannel = self.client.get_channel(settings.loggingChannel())
         if queueEnabled == False:
              await interaction.response.send_message("Queue is currently closed, try again later", ephemeral=True)
              return
@@ -49,7 +49,7 @@ class JoinButton(discord.ui.View):
         if user in queue:
             await interaction.response.send_message("You are already in queue", ephemeral=True)
             return
-        guild = self.client.get_guild(settings.queueServer)
+        guild = self.client.get_guild(settings.queueServer())
         roleUser = guild.get_member(user.id)
         for roleID in priority:
             if roleUser is not None and discord.utils.get(guild.roles, id=roleID) in roleUser.roles:
@@ -66,12 +66,12 @@ class JoinButton(discord.ui.View):
 
      @discord.ui.button(label='Leave Queue', style=discord.ButtonStyle.green)
      async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
-        logChannel = self.client.get_channel(settings.loggingChannel)
+        logChannel = self.client.get_channel(settings.loggingChannel())
         user = interaction.user
         if user not in queue:
             await interaction.response.send_message("You already not in queue", ephemeral=True)
             return
-        guild = self.client.get_guild(settings.queueServer)
+        guild = self.client.get_guild(settings.queueServer())
         for roleID in priority:
             if discord.utils.get(guild.roles, id=roleID) in user.roles:
                 priorityUsers.remove(user)
@@ -97,7 +97,7 @@ async def updateEmbeds(client):
         channel = client.get_channel(id)
         try:
             msg = await channel.fetch_message(embedMessages[id])
-            embed.title = settings.queueName
+            embed.title = settings.queueName()
             await msg.edit(embed=embed, view=JoinButton(client))
             print("updated embed in " + channel.name)
         except:
@@ -111,7 +111,7 @@ async def onRaid(message, client):
     priorityPulled = 0
     s = message + "\n"
     for i in range(0, 3):
-        if priorityPulled < settings.prioritySlots and len(priorityUsers) > 0:
+        if priorityPulled < settings.prioritySlots() and len(priorityUsers) > 0:
             priorityPulled+=1
             guy = priorityUsers.pop(0)
             queue.remove(guy)
@@ -125,7 +125,7 @@ async def onRaid(message, client):
             await guy.send(message)
             s+= str(i+1)+f". <@{guy.id}>" + "\n"
             print("Pulled From Normal")
-    logChannel = client.get_channel(settings.loggingChannel)
+    logChannel = client.get_channel(settings.loggingChannel())
     await logChannel.send(s, allowed_mentions = discord.AllowedMentions(users=False))
     await updateEmbeds(client)
         
@@ -137,11 +137,13 @@ def run_bot():
 
     @client.event
     async def on_ready():
-        print(settings.queueName + " bot up and running")
+        load_dotenv()
+        importlib.reload(settings)
+        print(settings.queueName() + " bot up and running")
         if startSync == True:
             synced = await tree.sync()
             print(f"Synced {len(synced)} commands")
-        guild = client.get_guild(settings.queueServer)
+        guild = client.get_guild(settings.queueServer())
         for entry in cur.execute("SELECT PrioID FROM Priority"):
             priority.append(entry[0])
             role = discord.utils.get(guild.roles, id=entry[0])
@@ -153,7 +155,7 @@ def run_bot():
     @tree.command(name="restart", description="restarts the bot")
     @app_commands.checks.has_permissions(administrator = True)
     async def restart(interaction: discord.Interaction):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         await interaction.response.send_message("Restarting, this may take a minute")
@@ -178,7 +180,7 @@ def run_bot():
     @tree.command(name="sync", description="sync commands")
     @app_commands.checks.has_permissions(administrator = True)
     async def sync(interaction: discord.Interaction):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         synced = await tree.sync()
@@ -216,7 +218,7 @@ def run_bot():
     @tree.command(name="removeserver", description="leaves a bad server")
     @app_commands.checks.has_permissions(administrator = True)
     async def removeserver(interaction: discord.Interaction, number: str):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         try:
@@ -233,7 +235,7 @@ def run_bot():
     @tree.command(name="viewbotinfo", description="see information about the bot")
     @app_commands.checks.has_permissions(manage_messages = True)
     async def botinfo(interaction: discord.Interaction):
-        guild = client.get_guild(settings.queueServer)
+        guild = client.get_guild(settings.queueServer())
 
         duration = int(time.time() - startTime)
         priorityRoles = [(discord.utils.get(guild.roles, id=roleID)) for roleID in priority]
@@ -241,7 +243,7 @@ def run_bot():
         infoembed = discord.Embed(title= client.user.name)
         infoembed.set_thumbnail(url=client.user.avatar.url)
         infoembed.add_field(name="Current Runtime: ", value=datetime.timedelta(seconds=duration))
-        infoembed.add_field(name="Raid Trigger: ", value=settings.raidString)
+        infoembed.add_field(name="Raid Trigger: ", value=settings.raidString())
         infoembed.add_field(name="Number of Embeds: ", value=str(len(embedMessages.keys())) + " embeds")
         infoembed.add_field(name="Priority Roles: ", value="".join(role.mention for role in priorityRoles))
         await interaction.response.send_message(embed=infoembed)
@@ -298,13 +300,13 @@ def run_bot():
     @tree.command(name="addpriority", description="adds a new priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioadd(interaction: discord.Interaction, role: discord.Role):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         if queueEnabled == True:
             await interaction.response.send_message("Queue must be disabled in order to change priority roles")
             return
-        guild = client.get_guild(settings.queueServer)
+        guild = client.get_guild(settings.queueServer())
         number = role.id
         if number in priority:
             await interaction.response.send_message("role is already a priority role")
@@ -317,13 +319,13 @@ def run_bot():
     @tree.command(name="removepriority", description="removes a priority role")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioremove(interaction: discord.Interaction, role: discord.Role):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         if queueEnabled == True:
             await interaction.response.send_message("Queue must be disabled in order to change priority roles")
             return
-        guild = client.get_guild(settings.queueServer)
+        guild = client.get_guild(settings.queueServer())
         number = role.id
         if number not in priority:
             await interaction.response.send_message("role is not a priority role")
@@ -336,7 +338,7 @@ def run_bot():
     @tree.command(name="togglequeue", description="toggles the queue on or off")
     @app_commands.checks.has_permissions(administrator = True)
     async def togglequeue(interaction: discord.Interaction, toggle: toggle):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         global queueEnabled, queue, priorityUsers
@@ -354,7 +356,7 @@ def run_bot():
     @tree.command(name="setstrategy", description="toggles the queue on or off")
     @app_commands.checks.has_permissions(administrator = True)
     async def setstrat(interaction: discord.Interaction, messageid: str):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         try:
@@ -372,7 +374,7 @@ def run_bot():
     @tree.command(name="setqueuethumbnail", description="sets the queue thumbnail image using a url")
     @app_commands.checks.has_permissions(administrator = True)
     async def setthumbnail(interaction: discord.Interaction, thumbnail: str):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         if not thumbnail.endswith((".jpg", ".png", ".webp", ".gif")):
@@ -384,12 +386,11 @@ def run_bot():
     @tree.command(name="setqueuechannel", description="changes queue channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def queuechannel(interaction: discord.Interaction, raidchannel: discord.TextChannel):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         number = raidchannel.id
         print("New raid channel: " + raidchannel.name)
-        settings.queueChannel = number
         set_key(".env", 'QUEUE_CHANNEL', str(number))
         #os.environ['QUEUE_CHANNEL'] = str(number)
         await interaction.response.send_message("Changed raid channel to " + raidchannel.name)
@@ -397,24 +398,22 @@ def run_bot():
     @tree.command(name="setloggingchannel", description="changes logging channel to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def loggingchannel(interaction: discord.Interaction, loggingchannel: discord.TextChannel):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         number = loggingchannel.id
         print("New logging channel: " + loggingchannel.name)
         
-        settings.loggingChannel = number
         set_key(".env", 'LOGGING_CHANNEL', str(number))
         await interaction.response.send_message("Changed logging channel to " + loggingchannel.name)
 
     @tree.command(name="setqueuename", description="changes queue name to inputted one")
     @app_commands.checks.has_permissions(administrator = True)
     async def queuename(interaction: discord.Interaction, name: str):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
         embed.title = name
-        settings.queueName = name
         set_key(".env", 'QUEUE_NAME', name)
         #os.environ['QUEUE_NAME'] = name
         await interaction.response.send_message("Changed queue title to " + name)
@@ -423,20 +422,18 @@ def run_bot():
     @tree.command(name="setraidtrigger", description="changes the keyword used to find raid codes")
     @app_commands.checks.has_permissions(administrator = True)
     async def raidtrigger(interaction: discord.Interaction, key: str):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        settings.raidString = key
         set_key(".env", 'RAID_CODE_IDENTIFIER', key)
         await interaction.response.send_message("Changed raid trigger to " + key)
 
     @tree.command(name="setprioritypulled", description="changes how many priority members are prioritized each raid")
     @app_commands.checks.has_permissions(administrator = True)
     async def prioritypulled(interaction: discord.Interaction, number: Literal[0, 1, 2, 3]):
-        if interaction.guild.id != settings.queueServer:
+        if interaction.guild.id != settings.queueServer():
             await interaction.response.send_message("This command cannot be used in " + interaction.guild.name)
             return
-        settings.prioritySlots = number  
         set_key(".env", 'PRIORITY_NUMBER', str(number))
         print("New priority number: " + str(number))
         await interaction.response.send_message("Changed number to prioritize to " + str(number))
@@ -451,17 +448,17 @@ def run_bot():
 
     @client.event
     async def on_message(message):
-        if client.get_channel(settings.queueChannel) == message.channel:
+        if client.get_channel(settings.queueChannel()) == message.channel:
             #print(message.content)
-            if settings.raidString in message.content and message.author.id != client.user.id:
+            if settings.raidString() in message.content and message.author.id != client.user.id:
                 if "iJ0LTU" in message.content:
                     print("iJ0LTU found in " + message.content)
                 else:
-                    index = message.content.find(settings.raidString)
+                    index = message.content.find(settings.raidString())
                     message_text = message.content[index:]
                     await onRaid(message_text, client)
                     print("Found message " + message.content)
 
-    client.run(settings.TOKEN)
+    client.run(settings.token())
 if __name__ == "__main__":
     run_bot()
