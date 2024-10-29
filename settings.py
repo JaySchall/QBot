@@ -1,8 +1,7 @@
 import os
 from dotenv import load_dotenv
-
-load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
+def load():
+    load_dotenv(override=True)
 
 def token():
     return os.getenv('DISCORD_TOKEN')

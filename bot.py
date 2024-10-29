@@ -137,8 +137,8 @@ def run_bot():
 
     @client.event
     async def on_ready():
-        load_dotenv()
         importlib.reload(settings)
+        settings.load()
         print(settings.queueName() + " bot up and running")
         if startSync == True:
             synced = await tree.sync()
