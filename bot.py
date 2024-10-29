@@ -137,9 +137,7 @@ def run_bot():
 
     @client.event
     async def on_ready():
-        print("Bot up and running")
-        importlib.reload(settings)
-        print(settings.queueName)
+        print(settings.queueName + " bot up and running")
         if startSync == True:
             synced = await tree.sync()
             print(f"Synced {len(synced)} commands")
@@ -172,6 +170,9 @@ def run_bot():
         except Exception as e:
             print(f"Failed to download the file: {e}")
             return
+        load_dotenv()
+        importlib.reload(settings)
+        
         os.execl(sys.executable, sys.executable, *sys.argv)
 
     @tree.command(name="sync", description="sync commands")
