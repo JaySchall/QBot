@@ -14,6 +14,7 @@ import settings
 
 con = sqlite3.connect("Queue.sqlite3")
 cur = con.cursor()
+print(settings.queueName)
 embed = discord.Embed(title=settings.queueName)
 embed.add_field(name="Users in Queue", value="1.")
 embedMessages = {}
