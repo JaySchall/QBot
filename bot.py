@@ -10,6 +10,7 @@ import time
 import urllib.request
 from discord import app_commands
 from dotenv import load_dotenv
+import importlib
 import settings
 
 con = sqlite3.connect("Queue.sqlite3")
@@ -137,7 +138,7 @@ def run_bot():
     @client.event
     async def on_ready():
         print("Bot up and running")
-        settings.reload()
+        importlib.reload(settings)
         if startSync == True:
             synced = await tree.sync()
             print(f"Synced {len(synced)} commands")
