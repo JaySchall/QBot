@@ -81,7 +81,11 @@ class JoinButton(discord.ui.View):
         #await interaction.response.send_message("You have left the queue", ephemeral=True)
 
 async def updateEmbeds(client):
-    embed.title = settings.queueName
+    if embed.title != settings.queueName:
+        embed.title = settings.queueName
+        msg = await channel.fetch_message(embedMessages[id])
+        await msg.edit(embed=embed, view=JoinButton(client))
+        print("fixed title")
     embed.remove_field(index=0)
     s = ""
     i = 1
